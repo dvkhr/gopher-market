@@ -1,13 +1,13 @@
 package store
 
 import (
-	"crypto/sha256"
+	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"gopher-market/internal/logger"
-	"log/slog"
-	"time"
+	"log"
+
+	"github.com/jackc/pgx/v5"
 )
 
 type Database struct {
@@ -21,10 +21,26 @@ func (ms *Database) NewStorage() error {
 		logger.Logg.Error("Couldn't connect to the database with an error", "error", err)
 		return err
 	}
+	/*// Создание контекста с таймаутом
+	    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	    defer cancel()
+
+	    // Проверка подключения с использованием контекста
+	    err = db.PingContext(ctx)
+	    if err != nil {
+			logger.Logg.Error("Failed to ping database", "error", err)
+			return err
+	    }*/
+
+	conn, err := pgx.Connect(context.Background(), "postgres://username:password@localhost:5432/mydb")
+	if err != nil {
+		log.Fatalf("Unable to connect to database: %v\n", err)
+	}
+	defer conn.Close(context.Background())
+
 	err = ms.initDBTables()
 	if err != nil {
-		slog.Error("Failed to initialize DB", "error", err)
-		logger.Logg.Error("Database retry after error", "error", err)
+		logger.Logg.Error("Failed to initialize DB", "error", err)
 	}
 	logger.Logg.Info("Database connection was created")
 	return nil
@@ -36,7 +52,7 @@ func (ms *Database) initDBTables() error {
 		`create table if not exists users ( 
 			user_id BIGSERIAL PRIMARY KEY, 
 			login VARCHAR(255) NOT NULL UNIQUE, 
-			password_hash BYTEA, 
+			password_hash  VARCHAR(255), 
 			current_balance DECIMAL(10, 2) DEFAULT 0.00 
 		);`,
 
@@ -67,7 +83,7 @@ func (ms *Database) initDBTables() error {
 	return errors.Join(errs...)
 }
 
-func (ms *Database) retry(f func() error, maxRetries int) error {
+/*func (ms *Database) retry(f func() error, maxRetries int) error {
 	var err error
 	for i := 0; i < maxRetries; i++ {
 		err = f()
@@ -78,35 +94,4 @@ func (ms *Database) retry(f func() error, maxRetries int) error {
 		time.Sleep(time.Duration(2*i+1) * time.Second)
 	}
 	return err
-}
-
-func (ms *Database) CreateUser(login, password string) error {
-
-	createUser := `INSERT INTO users(login) VALUES ($1)`
-
-	result, err := ms.db.Exec(createUser, login)
-	if err != nil {
-		return err
-	}
-
-	id, err := result.LastInsertId()
-	if err != nil {
-		return err
-	}
-
-	src := []byte(password + fmt.Sprint(id))
-	h := sha256.New()
-	h.Write(src)
-	dst := h.Sum(nil)
-
-	updateUser := `UPDATE users
-	SET password_hash=$1
-	WHERE user_id=$2;`
-
-	_, err = ms.db.Exec(updateUser, dst, id)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
+}*/

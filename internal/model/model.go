@@ -1,8 +1,8 @@
-package postgres
+package model
 
 import "time"
 
-type Users struct {
+type User struct {
 	Id            int     `json:"user_id"`         //  уникальный идентификатор пользователя
 	Username      string  `json:"login"`           // имя пользователя
 	Password_hash string  `json:"password_hash"`   // хэш пароля пользователя
