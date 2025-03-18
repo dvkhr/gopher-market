@@ -67,3 +67,25 @@ func WithLogging(h http.HandlerFunc) http.HandlerFunc {
 	}
 	return http.HandlerFunc(logFn)
 }
+func MiddlewareLogger(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		responseData := &responseData{
+			status: 0,
+			size:   0,
+		}
+		lw := loggingResponseWriter{
+			ResponseWriter: w,
+			responseData:   responseData,
+		}
+		duration := time.Since(start)
+		next.ServeHTTP(&lw, r)
+		Logg.Info(
+			"uri", r.RequestURI,
+			"method", r.Method,
+			"status", fmt.Sprintf("%v: %v", responseData.status, http.StatusText(responseData.status)),
+			slog.Duration("duration", duration),
+			"size", responseData.size,
+		)
+	})
+}

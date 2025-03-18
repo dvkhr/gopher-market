@@ -44,7 +44,6 @@ func CheckPassLog(db *sql.DB, login, password string) (bool, error) {
 	}
 	return true, nil
 }
-
 func LoginUser(db *sql.DB, login, password string) error {
 	isValid, err := CheckPassLog(db, login, password)
 	if err != nil {
