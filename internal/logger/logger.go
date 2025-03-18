@@ -4,88 +4,52 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 	"time"
-
-	"go.uber.org/zap"
-	"go.uber.org/zap/exp/zapslog"
 )
 
-var Logg slog.Logger
+var Logg *slog.Logger
 
 func init() {
-	logg := zap.Must(zap.NewProduction())
-
-	defer logg.Sync()
-	logger := slog.New(zapslog.NewHandler(logg.Core(), nil))
-	Logg = *logger
+	logger := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	})
+	Logg = slog.New(logger)
 }
 
-type (
-	responseData struct {
-		status int
-		size   int
-	}
-	loggingResponseWriter struct {
-		http.ResponseWriter
-		responseData *responseData
-	}
-)
-
-func (r *loggingResponseWriter) Write(b []byte) (int, error) {
-	size, err := r.ResponseWriter.Write(b)
-	r.responseData.size += size
-	return size, err
+type loggingResponseWriter struct {
+	http.ResponseWriter
+	status int
+	size   int
 }
 
 func (r *loggingResponseWriter) WriteHeader(statusCode int) {
+	r.status = statusCode
 	r.ResponseWriter.WriteHeader(statusCode)
-	r.responseData.status = statusCode
+
 }
 
-func WithLogging(h http.HandlerFunc) http.HandlerFunc {
-	logFn := func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-
-		responseData := &responseData{
-			status: 0,
-			size:   0,
-		}
-		lw := loggingResponseWriter{
-			ResponseWriter: w,
-			responseData:   responseData,
-		}
-		h.ServeHTTP(&lw, r)
-		duration := time.Since(start)
-
-		Logg.Info(
-			"uri", r.RequestURI,
-			"method", r.Method,
-			"status", fmt.Sprintf("%v: %v", responseData.status, http.StatusText(responseData.status)),
-			slog.Duration("duration", duration),
-			"size", responseData.size,
-		)
-	}
-	return http.HandlerFunc(logFn)
+func (r *loggingResponseWriter) Write(b []byte) (int, error) {
+	size, err := r.ResponseWriter.Write(b)
+	r.size += size
+	return size, err
 }
-func MiddlewareLogger(next http.Handler) http.Handler {
+
+func LoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		responseData := &responseData{
-			status: 0,
-			size:   0,
-		}
-		lw := loggingResponseWriter{
-			ResponseWriter: w,
-			responseData:   responseData,
-		}
+
+		crw := &loggingResponseWriter{ResponseWriter: w}
+		next.ServeHTTP(crw, r)
+
 		duration := time.Since(start)
-		next.ServeHTTP(&lw, r)
+
 		Logg.Info(
 			"uri", r.RequestURI,
 			"method", r.Method,
-			"status", fmt.Sprintf("%v: %v", responseData.status, http.StatusText(responseData.status)),
+			"status", fmt.Sprintf("%v: %v", crw.status, http.StatusText(crw.status)),
 			slog.Duration("duration", duration),
-			"size", responseData.size,
+			"size", crw.size,
 		)
 	})
 }

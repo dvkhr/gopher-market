@@ -1,23 +1,23 @@
 package store
 
 import (
-	"context"
 	"database/sql"
 	"errors"
 	"gopher-market/internal/logger"
-	"log"
 
-	"github.com/jackc/pgx/v5"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 type Database struct {
 	DBDSN string
-	db    *sql.DB
+	Db    *sql.DB
 }
 
-func (ms *Database) NewStorage() error {
+func (ms *Database) NewStorage(DBDSN string) error {
 	var err error
-	if ms.db, err = sql.Open("pgx", ms.DBDSN); err != nil {
+	ms.DBDSN = DBDSN
+	logger.Logg.Info(DBDSN)
+	if ms.Db, err = sql.Open("pgx", ms.DBDSN); err != nil {
 		logger.Logg.Error("Couldn't connect to the database with an error", "error", err)
 		return err
 	}
@@ -30,13 +30,14 @@ func (ms *Database) NewStorage() error {
 	    if err != nil {
 			logger.Logg.Error("Failed to ping database", "error", err)
 			return err
-	    }*/
+	    }
 
 	conn, err := pgx.Connect(context.Background(), "postgres://username:password@localhost:5432/mydb")
 	if err != nil {
 		log.Fatalf("Unable to connect to database: %v\n", err)
 	}
 	defer conn.Close(context.Background())
+	*/
 
 	err = ms.initDBTables()
 	if err != nil {
@@ -75,7 +76,7 @@ func (ms *Database) initDBTables() error {
 	}
 
 	for _, s := range stmts {
-		_, err := ms.db.Exec(s)
+		_, err := ms.Db.Exec(s)
 		if err != nil {
 			errs = append(errs, err)
 		}
