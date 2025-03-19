@@ -70,10 +70,42 @@ func (s *Server) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		"token":   authToken,
 	})
 }
+func (s *Server) LoginUser(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+	var requestBody requestBody
+	err := json.NewDecoder(r.Body).Decode(&requestBody)
+	if err != nil {
+		http.Error(w, "Bad request format", http.StatusBadRequest)
+		return
+	}
 
-func LoginUser(w http.ResponseWriter, r *http.Request) {
+	user, err := auth.GetUserByLogin(s.Store.Db, requestBody.Login)
+	if err != nil {
+		http.Error(w, "The user does not exist", http.StatusUnauthorized)
+		return
+	}
+
+	if err := auth.CheckPass(user.Password_hash, requestBody.Password); err != nil {
+		http.Error(w, "Invalid login or password", http.StatusUnauthorized)
+		return
+	}
+	authToken, err := auth.GenerateToken(requestBody.Login)
+	if err != nil {
+		http.Error(w, "Failed generation token", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Authorization", fmt.Sprintf("Bearer %s", authToken))
+
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("POST /api/user/login"))
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":  "success",
+		"message": "User registered and authenticated",
+		"token":   authToken,
+	})
+
 }
 
 func UploadOrder(w http.ResponseWriter, r *http.Request) {

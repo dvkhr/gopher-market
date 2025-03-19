@@ -32,7 +32,7 @@ func main() {
 	r.Get("/", handlers.HelloHandler)
 	r.Route("/api/user", func(r chi.Router) {
 		r.Post("/register", server.RegisterUser)
-		r.Post("/login", handlers.LoginUser)
+		r.Post("/login", server.LoginUser)
 
 		r.Post("/orders", handlers.UploadOrder)
 		r.Get("/orders", handlers.GetOrders)
