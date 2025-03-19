@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"gopher-market/internal/auth"
 	"gopher-market/internal/config"
 	"gopher-market/internal/store"
@@ -25,7 +26,6 @@ func NewServer(config config.Config) (*Server, error) {
 }
 
 func HelloHandler(w http.ResponseWriter, r *http.Request) {
-	// Записываем текст в HTTP-ответ
 	w.Write([]byte("Hello, world!"))
 }
 
@@ -61,7 +61,7 @@ func (s *Server) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed generation token", http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Authorization", authToken)
+	w.Header().Set("Authorization", fmt.Sprintf("Bearer %s", authToken))
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{
