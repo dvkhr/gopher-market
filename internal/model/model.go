@@ -18,9 +18,9 @@ const (
 	Processed  Status = "processed"  //данные по заказу проверены и информация о расчёте успешно получена
 )
 
-type orders struct {
+type Order struct {
 	Id           int       `json:"id"`          //  уникальный идентификатор заказа
-	User_id      string    `json:"user_id"`     // уникальный идентификатор пользователя
+	User_id      int       `json:"user_id"`     // уникальный идентификатор пользователя
 	Order_number int       `json:"number"`      // номер заказа
 	Uploaded_at  time.Time `json:"uploaded_at"` // время загрузки номера заказа time.RFC3339
 	Status       Status    `json:"status"`      // статус обработки заказа

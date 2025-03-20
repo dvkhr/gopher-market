@@ -21,6 +21,7 @@ func (ms *Database) NewStorage(DBDSN string) error {
 		logger.Logg.Error("Couldn't connect to the database with an error", "error", err)
 		return err
 	}
+	//defer ms.Db.Close()
 	/*// Создание контекста с таймаутом
 	    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	    defer cancel()
@@ -61,7 +62,7 @@ func (ms *Database) initDBTables() error {
 			id BIGSERIAL PRIMARY KEY,
 			user_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE, 
 			order_number BIGINT NOT NULL UNIQUE,          
-			uploaded_at TIMESTAMP NOT NULL,                
+			uploaded_at TIMESTAMP NOT NULL default (now() at time zone 'utc'),                
 			status VARCHAR(50) NOT NULL
 		);`,
 
