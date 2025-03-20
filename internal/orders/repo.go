@@ -29,7 +29,7 @@ func CreateOrder(db *sql.DB, userId int, orderNumber int) (int, error) {
 
 	var id int
 
-	err := db.QueryRow(createOrder, userId, orderNumber, model.New).Scan(&id)
+	err := db.QueryRow(createOrder, userId, orderNumber, model.StatusNew).Scan(&id)
 	if err != nil {
 		logger.Logg.Info("err", "err", err)
 		if err == sql.ErrNoRows {
@@ -38,4 +38,33 @@ func CreateOrder(db *sql.DB, userId int, orderNumber int) (int, error) {
 		return 0, err
 	}
 	return id, nil
+}
+
+func GetOrders(db *sql.DB, userID int) ([]model.Order, error) {
+
+	GetOrders := `
+        SELECT id, user_id, order_number, uploaded_at, status
+        FROM orders
+        WHERE user_id = $1
+        ORDER BY uploaded_at DESC
+    `
+	rows, err := db.Query(GetOrders, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var orders []model.Order
+	for rows.Next() {
+		var order model.Order
+		var statusStr string
+		err := rows.Scan(&order.Id, &order.User_id, &order.Order_number, &order.Uploaded_at, &statusStr)
+		if err != nil {
+			return nil, err
+		}
+		order.Status = model.Status(statusStr)
+		orders = append(orders, order)
+	}
+
+	return orders, nil
 }

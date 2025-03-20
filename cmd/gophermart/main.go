@@ -36,8 +36,7 @@ func main() {
 		r.Post("/login", server.LoginUser)
 
 		r.With(middleware.Auth).Post("/orders", server.UploadOrder)
-		//r.Post("/orders", server.UploadOrder)
-		r.Get("/orders", handlers.GetOrders)
+		r.With(middleware.Auth).Get("/orders", server.GetOrders)
 
 		r.Get("/balance", handlers.GetBalance)
 
