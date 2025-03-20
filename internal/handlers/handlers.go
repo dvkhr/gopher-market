@@ -5,9 +5,16 @@ import (
 	"fmt"
 	"gopher-market/internal/auth"
 	"gopher-market/internal/config"
+	"gopher-market/internal/middleware"
+	"gopher-market/internal/orders"
 	"gopher-market/internal/store"
+	"io"
 	"net/http"
+	"strconv"
+	"strings"
 	"sync"
+
+	luhn "github.com/EClaesson/go-luhn"
 )
 
 type Server struct {
@@ -107,10 +114,74 @@ func (s *Server) LoginUser(w http.ResponseWriter, r *http.Request) {
 	})
 
 }
+func readRequestBody(r *http.Request) (string, error) {
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		return "", err
+	}
+	defer r.Body.Close()
 
-func UploadOrder(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("POST /api/user/orders"))
+	return string(bodyBytes), nil
+}
+
+func (s *Server) UploadOrder(w http.ResponseWriter, r *http.Request) {
+	username, ok := r.Context().Value(middleware.UserContextKey).(string)
+	if !ok {
+		http.Error(w, "User not found in context", http.StatusUnauthorized)
+		return
+	}
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	body, err := readRequestBody(r)
+	if err != nil {
+		http.Error(w, "Failed to read request body", http.StatusBadRequest)
+		return
+	}
+
+	orderNumber := strings.TrimSpace(body)
+	if orderNumber == "" || !orders.Is_numeric(orderNumber) {
+		http.Error(w, "Invalid order number format", http.StatusBadRequest)
+		return
+	}
+	isValid, _ := luhn.IsValid(orderNumber)
+
+	if !isValid {
+		http.Error(w, "Invalid order number", http.StatusUnprocessableEntity)
+		return
+	}
+	orderNumberInt, err := strconv.Atoi(orderNumber)
+	if err != nil {
+		http.Error(w, "Couldn't convert order number", http.StatusInternalServerError)
+		return
+	}
+
+	order, err := orders.GetOrderByNumber(s.Store.Db, orderNumberInt)
+
+	if err == nil {
+		user, _ := auth.GetUserById(s.Store.Db, order.User_id)
+		if user.Username == username {
+			w.WriteHeader(http.StatusOK)
+			return
+		} else {
+			http.Error(w, "Order number already uploaded by another user", http.StatusConflict)
+			return
+		}
+	}
+	user, _ := auth.GetIdByUsername(s.Store.Db, username)
+	_, err = orders.CreateOrder(s.Store.Db, user.Id, orderNumberInt)
+	if err != nil {
+		http.Error(w, "Failed registered new order", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusAccepted)
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":  "accepted",
+		"message": "User registered new order",
+	})
 }
 
 func GetOrders(w http.ResponseWriter, r *http.Request) {

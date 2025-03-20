@@ -24,6 +24,19 @@ func CreateUser(db *sql.DB, login, password_hash string) (int, error) {
 	return id, nil
 }
 
+func GetUserByLogin(db *sql.DB, login string) (*model.User, error) {
+	var user model.User
+	err := db.QueryRow("SELECT user_id, login, password_hash, current_balance FROM users WHERE login = $1", login).
+		Scan(&user.Id, &user.Username, &user.Password_hash, &user.Balance)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrUserNotFound
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+
 func GetUserById(db *sql.DB, id int) (*model.User, error) {
 	var user model.User
 	err := db.QueryRow("SELECT user_id, login, password_hash, current_balance FROM users WHERE user_id = $1", id).
@@ -37,9 +50,9 @@ func GetUserById(db *sql.DB, id int) (*model.User, error) {
 	return &user, nil
 }
 
-func GetUserByLogin(db *sql.DB, login string) (*model.User, error) {
+func GetIdByUsername(db *sql.DB, username string) (*model.User, error) {
 	var user model.User
-	err := db.QueryRow("SELECT user_id, login, password_hash, current_balance FROM users WHERE login = $1", login).
+	err := db.QueryRow("SELECT user_id, login, password_hash, current_balance FROM users WHERE login = $1", username).
 		Scan(&user.Id, &user.Username, &user.Password_hash, &user.Balance)
 	if err != nil {
 		if err == sql.ErrNoRows {

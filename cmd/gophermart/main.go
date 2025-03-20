@@ -4,6 +4,7 @@ import (
 	"gopher-market/internal/config"
 	"gopher-market/internal/handlers"
 	"gopher-market/internal/logger"
+	"gopher-market/internal/middleware"
 	"net/http"
 	"os"
 	"time"
@@ -34,7 +35,8 @@ func main() {
 		r.Post("/register", server.RegisterUser)
 		r.Post("/login", server.LoginUser)
 
-		r.Post("/orders", handlers.UploadOrder)
+		r.With(middleware.Auth).Post("/orders", server.UploadOrder)
+		//r.Post("/orders", server.UploadOrder)
 		r.Get("/orders", handlers.GetOrders)
 
 		r.Get("/balance", handlers.GetBalance)
