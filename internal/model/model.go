@@ -22,6 +22,7 @@ type Order struct {
 	Id           int       `json:"id"`          //  уникальный идентификатор заказа
 	User_id      int       `json:"user_id"`     // уникальный идентификатор пользователя
 	Order_number int       `json:"number"`      // номер заказа
+	Accrual      float64   `json:"Accrual"`     // вознаграждение за заказ
 	Uploaded_at  time.Time `json:"uploaded_at"` // время загрузки номера заказа time.RFC3339
 	Status       Status    `json:"status"`      // статус обработки заказа
 }
@@ -33,7 +34,7 @@ const (
 	Withdrawn T_type = "withdrawn" // снятие
 )
 
-type transactions struct {
+type Transactions struct {
 	Id                int       `json:"id"`                //  уникальный идентификатор транзакции
 	User_id           string    `json:"user_id"`           // уникальный идентификатор пользователя
 	Order_number      int       `json:"number"`            // номер заказа

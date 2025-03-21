@@ -1,14 +1,18 @@
 package logger
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
-	"time"
 )
 
 var Logg *slog.Logger
+
+type contextKey string
+
+const UserContextKey contextKey = "username"
 
 func init() {
 	logger := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
@@ -37,19 +41,33 @@ func (r *loggingResponseWriter) Write(b []byte) (int, error) {
 
 func LoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
+		//start := time.Now()
+
+		username, ok := r.Context().Value(UserContextKey).(string)
+		if !ok {
+			username = "User is not authorized"
+		}
+		/*var logMessage string
+
+		if ok && username != "" {
+			logMessage = "User: " + username
+		} else {
+			logMessage = "User is not authorized"
+		}*/
 
 		crw := &loggingResponseWriter{ResponseWriter: w}
-		next.ServeHTTP(crw, r)
+		ctx := context.WithValue(r.Context(), UserContextKey, username)
 
-		duration := time.Since(start)
+		//duration := time.Since(start)
 
 		Logg.Info(
 			"uri", r.RequestURI,
 			"method", r.Method,
 			"status", fmt.Sprintf("%v: %v", crw.status, http.StatusText(crw.status)),
-			slog.Duration("duration", duration),
-			"size", crw.size,
+			//slog.Duration("duration", duration),
+			//"size", crw.size,
+			slog.String("User: ", username),
 		)
+		next.ServeHTTP(crw, r.WithContext(ctx))
 	})
 }

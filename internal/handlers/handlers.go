@@ -2,12 +2,15 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"gopher-market/internal/auth"
 	"gopher-market/internal/config"
 	"gopher-market/internal/middleware"
+	"gopher-market/internal/model"
 	"gopher-market/internal/orders"
 	"gopher-market/internal/store"
+	"gopher-market/internal/transactions"
 	"io"
 	"net/http"
 	"strconv"
@@ -30,10 +33,6 @@ func NewServer(config config.Config) (*Server, error) {
 		return nil, err
 	}
 	return &Server{Store: s, Config: config}, nil
-}
-
-func HelloHandler(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Hello, world!"))
 }
 
 type requestBody struct {
@@ -112,7 +111,6 @@ func (s *Server) LoginUser(w http.ResponseWriter, r *http.Request) {
 		"message": "User registered and authenticated",
 		"token":   authToken,
 	})
-
 }
 func readRequestBody(r *http.Request) (string, error) {
 	bodyBytes, err := io.ReadAll(r.Body)
@@ -124,6 +122,33 @@ func readRequestBody(r *http.Request) (string, error) {
 	return string(bodyBytes), nil
 }
 
+func (s *Server) CheckOrder(orNum, username string) (int, error) {
+	orderNumber := strings.TrimSpace(orNum)
+	if orderNumber == "" || !orders.Is_numeric(orderNumber) {
+		return 0, errors.New("invalid order number format (StatusBadRequest)")
+	}
+	isValid, _ := luhn.IsValid(orderNumber)
+
+	if !isValid {
+		return 0, errors.New("invalid order number (StatusUnprocessableEntity)")
+	}
+	orderNumberInt, err := strconv.Atoi(orderNumber)
+	if err != nil {
+		return 0, errors.New("couldn't convert order number (StatusInternalServerError)")
+	}
+
+	order, err := orders.GetOrderByNumber(s.Store.Db, orderNumberInt)
+
+	if err == nil {
+		user, _ := auth.GetUserById(s.Store.Db, order.User_id)
+		if user.Username == username {
+			return 0, errors.New("the order was uploaded by the user (StatusOK)")
+		} else {
+			return 0, errors.New("order number already uploaded by another use(StatusConflict)")
+		}
+	}
+	return orderNumberInt, nil
+}
 func (s *Server) UploadOrder(w http.ResponseWriter, r *http.Request) {
 	username, ok := r.Context().Value(middleware.UserContextKey).(string)
 	if !ok {
@@ -140,36 +165,24 @@ func (s *Server) UploadOrder(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to read request body", http.StatusBadRequest)
 		return
 	}
-
-	orderNumber := strings.TrimSpace(body)
-	if orderNumber == "" || !orders.Is_numeric(orderNumber) {
-		http.Error(w, "Invalid order number format", http.StatusBadRequest)
-		return
-	}
-	isValid, _ := luhn.IsValid(orderNumber)
-
-	if !isValid {
-		http.Error(w, "Invalid order number", http.StatusUnprocessableEntity)
-		return
-	}
-	orderNumberInt, err := strconv.Atoi(orderNumber)
+	orderNumberInt, err := s.CheckOrder(body, username)
 	if err != nil {
-		http.Error(w, "Couldn't convert order number", http.StatusInternalServerError)
+		switch err.Error() {
+		case "invalid order number (StatusUnprocessableEntity)":
+			http.Error(w, "invalid order number ", http.StatusUnprocessableEntity)
+		case "invalid order number format (StatusBadRequest)":
+			http.Error(w, "invalid order number format", http.StatusBadRequest)
+		case "the order was uploaded by the user (StatusOK)":
+			http.Error(w, "the order was uploaded by the user", http.StatusOK)
+		case "order number already uploaded by another user(StatusConflict)":
+			http.Error(w, "order number already uploaded by another userr", http.StatusConflict)
+
+		default:
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+		}
 		return
 	}
 
-	order, err := orders.GetOrderByNumber(s.Store.Db, orderNumberInt)
-
-	if err == nil {
-		user, _ := auth.GetUserById(s.Store.Db, order.User_id)
-		if user.Username == username {
-			w.WriteHeader(http.StatusOK)
-			return
-		} else {
-			http.Error(w, "Order number already uploaded by another user", http.StatusConflict)
-			return
-		}
-	}
 	user, _ := auth.GetIdByUsername(s.Store.Db, username)
 	_, err = orders.CreateOrder(s.Store.Db, user.Id, orderNumberInt)
 	if err != nil {
@@ -213,13 +226,78 @@ func (s *Server) GetOrders(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(orders)
 }
 
-func GetBalance(w http.ResponseWriter, r *http.Request) {
+func (s *Server) GetBalance(w http.ResponseWriter, r *http.Request) {
+	username, ok := r.Context().Value(middleware.UserContextKey).(string)
+	if !ok {
+		http.Error(w, "User not found in context", http.StatusUnauthorized)
+		return
+	}
+
+	if r.Method != http.MethodGet {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	user, err := auth.GetUserByLogin(s.Store.Db, username)
+	if err != nil {
+		http.Error(w, "The user does not exist", http.StatusInternalServerError)
+		return
+	}
+
+	withdrawnBalance, err := transactions.GetwithdrawnBalance(s.Store.Db, username)
+	if err != nil {
+		http.Error(w, "Failded get the withdrawn amount", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("GET /api/user/balance"))
+	json.NewEncoder(w).Encode(map[string]float64{
+		"current": user.Balance,
+		"token":   withdrawnBalance,
+	})
 }
-func WithdrawBalance(w http.ResponseWriter, r *http.Request) {
+
+type Balance struct {
+	Order string  `json:"order"` // Номер заказа
+	Sum   float64 `json:"sum"`   // Сумма баллов
+}
+
+func (s *Server) WithdrawBalance(w http.ResponseWriter, r *http.Request) {
+	username, ok := r.Context().Value(middleware.UserContextKey).(string)
+	if !ok {
+		http.Error(w, "User not found in context", http.StatusUnauthorized)
+		return
+	}
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var transactionType model.T_type = "withdrawn"
+
+	var req Balance
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	orderNumberInt, err := s.CheckOrder(req.Order, username)
+
+	if err != nil {
+		http.Error(w, "Incorrect order number", http.StatusUnprocessableEntity)
+		return
+	}
+
+	err = transactions.CreateTransaction(s.Store.Db, username, int64(orderNumberInt), req.Sum, transactionType)
+	if err.Error() == "insufficient funds (402)" {
+		http.Error(w, "insufficient funds in the account", http.StatusPaymentRequired)
+		return
+	} else {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
+
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("POST /api/user/balance/withdraw"))
 }
 
 func GetWithdrawals(w http.ResponseWriter, r *http.Request) {

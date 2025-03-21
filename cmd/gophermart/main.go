@@ -28,20 +28,25 @@ func main() {
 	}
 
 	r := chi.NewRouter()
-	r.Use(logger.LoggingMiddleware)
+	//r.Use(middleware.Auth)
+	//r.Use(logger.LoggingMiddleware)
 
-	r.Get("/", handlers.HelloHandler)
 	r.Route("/api/user", func(r chi.Router) {
+		r.Use(logger.LoggingMiddleware)
 		r.Post("/register", server.RegisterUser)
 		r.Post("/login", server.LoginUser)
 
-		r.With(middleware.Auth).Post("/orders", server.UploadOrder)
-		r.With(middleware.Auth).Get("/orders", server.GetOrders)
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.Auth)
+			r.Use(logger.LoggingMiddleware)
+			r.Post("/orders", server.UploadOrder)
+			r.Get("/orders", server.GetOrders)
 
-		r.Get("/balance", handlers.GetBalance)
+			r.Get("/balance", server.GetBalance)
 
-		r.Post("/balance/withdraw", handlers.WithdrawBalance)
-		r.Get("/withdrawals", handlers.GetWithdrawals)
+			r.Post("/balance/withdraw", server.WithdrawBalance)
+			r.Get("/withdrawals", handlers.GetWithdrawals)
+		})
 	})
 
 	serv := &http.Server{Addr: cfg.Address,

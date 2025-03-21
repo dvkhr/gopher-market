@@ -12,8 +12,8 @@ var ErrDuplicate = errors.New("ordernumber already exists")
 
 func GetOrderByNumber(db *sql.DB, order_number int) (*model.Order, error) {
 	var order model.Order
-	err := db.QueryRow("SELECT id, user_id, order_number, uploaded_at, status FROM orders WHERE order_number = $1", order_number).
-		Scan(&order.Id, &order.User_id, &order.Order_number, &order.Uploaded_at, &order.Status)
+	err := db.QueryRow("SELECT order_id, user_id, order_number, accrual, uploaded_at, status FROM orders WHERE order_number = $1", order_number).
+		Scan(&order.Id, &order.User_id, &order.Order_number, &order.Accrual, &order.Uploaded_at, &order.Status)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -25,7 +25,7 @@ func GetOrderByNumber(db *sql.DB, order_number int) (*model.Order, error) {
 }
 
 func CreateOrder(db *sql.DB, userId int, orderNumber int) (int, error) {
-	createOrder := `INSERT INTO orders(user_id, order_number, status) VALUES ($1, $2, $3) RETURNING id`
+	createOrder := `INSERT INTO orders(user_id, order_number, status) VALUES ($1, $2, $3) RETURNING order_id`
 
 	var id int
 
@@ -43,7 +43,7 @@ func CreateOrder(db *sql.DB, userId int, orderNumber int) (int, error) {
 func GetOrders(db *sql.DB, userID int) ([]model.Order, error) {
 
 	GetOrders := `
-        SELECT id, user_id, order_number, uploaded_at, status
+        SELECT order_id, user_id, order_number, accrual, uploaded_at, status
         FROM orders
         WHERE user_id = $1
         ORDER BY uploaded_at DESC
@@ -58,7 +58,7 @@ func GetOrders(db *sql.DB, userID int) ([]model.Order, error) {
 	for rows.Next() {
 		var order model.Order
 		var statusStr string
-		err := rows.Scan(&order.Id, &order.User_id, &order.Order_number, &order.Uploaded_at, &statusStr)
+		err := rows.Scan(&order.Id, &order.User_id, &order.Order_number, &order.Accrual, &order.Uploaded_at, &statusStr)
 		if err != nil {
 			return nil, err
 		}

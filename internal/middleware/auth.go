@@ -40,16 +40,9 @@ func Auth(next http.Handler) http.Handler {
 			return
 		}
 
-		// Сохраняем имя пользователя в контексте
 		ctx := context.WithValue(r.Context(), UserContextKey, username)
 		r = r.WithContext(ctx)
 
 		next.ServeHTTP(w, r)
 	})
 }
-
-/* username, ok := r.Context().Value(userContextKey).(string)
-   if !ok {
-       http.Error(w, "User not found in context", http.StatusInternalServerError)
-       return
-   }*/
