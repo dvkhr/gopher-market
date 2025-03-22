@@ -13,7 +13,7 @@ var ErrDuplicate = errors.New("ordernumber already exists")
 func GetOrderByNumber(db *sql.DB, order_number int) (*model.Order, error) {
 	var order model.Order
 	err := db.QueryRow("SELECT order_id, user_id, order_number, accrual, uploaded_at, status FROM orders WHERE order_number = $1", order_number).
-		Scan(&order.Id, &order.User_id, &order.Order_number, &order.Accrual, &order.Uploaded_at, &order.Status)
+		Scan(&order.ID, &order.UserID, &order.OrderNumber, &order.Accrual, &order.UploadedAt, &order.Status)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -58,7 +58,7 @@ func GetOrders(db *sql.DB, userId int) ([]model.Order, error) {
 	for rows.Next() {
 		var order model.Order
 		var statusStr string
-		err := rows.Scan(&order.Id, &order.User_id, &order.Order_number, &order.Accrual, &order.Uploaded_at, &statusStr)
+		err := rows.Scan(&order.ID, &order.UserID, &order.OrderNumber, &order.Accrual, &order.UploadedAt, &statusStr)
 		if err != nil {
 			return nil, err
 		}

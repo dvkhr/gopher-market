@@ -22,7 +22,7 @@ func GetwithdrawnBalance(db *sql.DB, username string) (float64, error) {
 	return withdrawnBalance, nil
 }
 
-func CreateTransaction(db *sql.DB, username string, orderNumber int64, amount float64, transactionType model.T_type) error {
+func CreateTransaction(db *sql.DB, username string, orderNumber int64, amount float64, transactionType model.TType) error {
 	tx, err := db.Begin()
 	if err != nil {
 		return err
@@ -39,7 +39,7 @@ func CreateTransaction(db *sql.DB, username string, orderNumber int64, amount fl
 		return err
 	}
 
-	_, err = orders.CreateOrder(db, user.Id, int(orderNumber))
+	_, err = orders.CreateOrder(db, user.ID, int(orderNumber))
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -61,14 +61,14 @@ func CreateTransaction(db *sql.DB, username string, orderNumber int64, amount fl
 		return err
 	}
 
-	_, err = tx.Exec("UPDATE users SET current_balance = $1 WHERE user_id = $2", newBalance, user.Id)
+	_, err = tx.Exec("UPDATE users SET current_balance = $1 WHERE user_id = $2", newBalance, user.ID)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
 
 	_, err = tx.Exec("INSERT INTO transactions (user_id, order_number, amount, transactions_type, updated_at) VALUES ($1, $2, $3, $4, $5)",
-		user.Id, orderNumber, amount, transactionType, time.Now())
+		user.ID, orderNumber, amount, transactionType, time.Now())
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -98,7 +98,7 @@ func Getwithdrawals(db *sql.DB, userId int) ([]model.Transactions, error) {
 	var withdrawals []model.Transactions
 	for rows.Next() {
 		var withdrawal model.Transactions
-		err := rows.Scan(&withdrawal.Order_number, &withdrawal.Amount, &withdrawal.Updated_at)
+		err := rows.Scan(&withdrawal.OrderNumber, &withdrawal.Amount, &withdrawal.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}

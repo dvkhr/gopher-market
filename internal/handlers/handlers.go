@@ -94,7 +94,7 @@ func (s *Server) LoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := auth.CheckPass(user.Password_hash, requestBody.Password); err != nil {
+	if err := auth.CheckPass(user.PasswordHash, requestBody.Password); err != nil {
 		http.Error(w, "Invalid login or password", http.StatusUnauthorized)
 		return
 	}
@@ -140,7 +140,7 @@ func (s *Server) CheckOrder(orNum, username string) (int, error) {
 	order, err := orders.GetOrderByNumber(s.Store.Db, orderNumberInt)
 
 	if err == nil {
-		user, _ := auth.GetUserById(s.Store.Db, order.User_id)
+		user, _ := auth.GetUserById(s.Store.Db, order.UserID)
 		if user.Username == username {
 			return 0, errors.New("the order was uploaded by the user (StatusOK)")
 		} else {
@@ -184,7 +184,7 @@ func (s *Server) UploadOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, _ := auth.GetIdByUsername(s.Store.Db, username)
-	_, err = orders.CreateOrder(s.Store.Db, user.Id, orderNumberInt)
+	_, err = orders.CreateOrder(s.Store.Db, user.ID, orderNumberInt)
 	if err != nil {
 		http.Error(w, "Failed registered new order", http.StatusInternalServerError)
 		return
@@ -210,7 +210,7 @@ func (s *Server) GetOrders(w http.ResponseWriter, r *http.Request) {
 
 	user, _ := auth.GetIdByUsername(s.Store.Db, username)
 
-	orders, err := orders.GetOrders(s.Store.Db, user.Id)
+	orders, err := orders.GetOrders(s.Store.Db, user.ID)
 	if err != nil {
 		http.Error(w, "Failed fetching orders from DB:", http.StatusInternalServerError)
 		return
@@ -275,7 +275,7 @@ func (s *Server) WithdrawBalance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var transactionType model.T_type = "withdrawn"
+	var transactionType model.TType = model.Withdraw
 
 	var req Balance
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -313,7 +313,7 @@ func (s *Server) GetWithdrawals(w http.ResponseWriter, r *http.Request) {
 
 	user, _ := auth.GetIdByUsername(s.Store.Db, username)
 
-	withdrawals, err := transactions.Getwithdrawals(s.Store.Db, user.Id)
+	withdrawals, err := transactions.Getwithdrawals(s.Store.Db, user.ID)
 	if err != nil {
 		http.Error(w, "Failed fetching orders from DB:", http.StatusInternalServerError)
 		return
