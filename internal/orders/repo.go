@@ -66,5 +66,9 @@ func GetOrders(db *sql.DB, userId int) ([]model.Order, error) {
 		orders = append(orders, order)
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
 	return orders, nil
 }

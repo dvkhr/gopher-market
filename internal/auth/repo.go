@@ -9,12 +9,12 @@ import (
 var ErrUserNotFound = errors.New("user not found")
 var ErrDuplicate = errors.New("login already exists")
 
-func CreateUser(db *sql.DB, login, password_hash string) (int, error) {
+func CreateUser(db *sql.DB, login, passwordHash string) (int, error) {
 	createUser := `INSERT INTO users(login, password_hash) VALUES ($1, $2) RETURNING user_id`
 
 	var id int
 
-	err := db.QueryRow(createUser, login, password_hash).Scan(&id)
+	err := db.QueryRow(createUser, login, passwordHash).Scan(&id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return 0, ErrDuplicate
