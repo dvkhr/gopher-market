@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"gopher-market/internal/config"
 	"gopher-market/internal/handlers"
 	"gopher-market/internal/logger"
 	"gopher-market/internal/middleware"
 	"net/http"
 	"os"
+	"os/signal"
 	"time"
 
 	"github.com/go-chi/chi"
@@ -19,7 +21,6 @@ func main() {
 		logger.Logg.Error("Server configuration error", "error", err)
 		os.Exit(1)
 	}
-	//cfg.DBDsn = "postgres://admin:12345@localhost:5432/loyalty_bonus_system?sslmode=disable"
 	logger.Logg.Info("cfg", "cfg", cfg.DBDsn)
 	server, err := handlers.NewServer(cfg)
 	if err != nil {
@@ -28,8 +29,6 @@ func main() {
 	}
 
 	r := chi.NewRouter()
-	//r.Use(middleware.Auth)
-	//r.Use(logger.LoggingMiddleware)
 
 	r.Route("/api/user", func(r chi.Router) {
 		r.Use(logger.LoggingMiddleware)
@@ -49,14 +48,35 @@ func main() {
 		})
 	})
 
-	serv := &http.Server{Addr: cfg.Address,
+	serv := &http.Server{
+		Addr:         cfg.Address,
 		Handler:      r,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second}
 
-	err = serv.ListenAndServe()
-	if err != nil {
-		panic(err)
+	go func() {
+		logger.Logg.Info("Starting server", "address", cfg.Address)
+		if err := serv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Logg.Error("Server failed to start", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+
+	<-stop
+
+	logger.Logg.Info("Shutting down server gracefully")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	if err := serv.Shutdown(ctx); err != nil {
+		logger.Logg.Error("Server shutdown error", "error", err)
+		os.Exit(1)
 	}
+
+	logger.Logg.Info("Server stopped")
 }
