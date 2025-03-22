@@ -101,7 +101,7 @@ func Getwithdrawals(db *sql.DB, userID int) ([]model.Transactions, error) {
 	return withdrawals, nil
 }
 
-func Update(db *sql.DB, orderNumber int, status string, accrual float64) error {
+func Update(db *sql.DB, orderNumber string, status string, accrual float64) error {
 	tx, err := db.Begin()
 	if err != nil {
 		return err
