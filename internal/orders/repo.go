@@ -40,7 +40,7 @@ func CreateOrder(db *sql.DB, userId int, orderNumber int) (int, error) {
 	return id, nil
 }
 
-func GetOrders(db *sql.DB, userID int) ([]model.Order, error) {
+func GetOrders(db *sql.DB, userId int) ([]model.Order, error) {
 
 	GetOrders := `
         SELECT order_id, user_id, order_number, accrual, uploaded_at, status
@@ -48,7 +48,7 @@ func GetOrders(db *sql.DB, userID int) ([]model.Order, error) {
         WHERE user_id = $1
         ORDER BY uploaded_at DESC
     `
-	rows, err := db.Query(GetOrders, userID)
+	rows, err := db.Query(GetOrders, userId)
 	if err != nil {
 		return nil, err
 	}

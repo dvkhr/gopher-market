@@ -59,9 +59,10 @@ func (ms *Database) initDBTables() error {
 		);`,
 
 		`create table if not exists orders (
-			id BIGSERIAL PRIMARY KEY,
+			order_id BIGSERIAL PRIMARY KEY,
 			user_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE, 
-			order_number BIGINT NOT NULL UNIQUE,          
+			order_number BIGINT NOT NULL UNIQUE, 
+			accrual DECIMAL(10, 2) DEFAULT 0.00,         
 			uploaded_at TIMESTAMP NOT NULL default (now() at time zone 'utc'),                
 			status VARCHAR(50) NOT NULL
 		);`,

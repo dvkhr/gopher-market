@@ -9,13 +9,13 @@ import (
 	"time"
 )
 
-func GetwithdrawnBalance(db *sql.DB, login string) (float64, error) {
+func GetwithdrawnBalance(db *sql.DB, username string) (float64, error) {
 	var withdrawnBalance float64
 	err := db.QueryRow(` 
 	SELECT COALESCE(SUM(amount), 0) 
         FROM transactions 
-        WHERE user_id = $1 AND transactions_type = 'WITHDRAW'"`,
-		login).Scan(&withdrawnBalance)
+        WHERE user_id = $1 AND transactions_type = 'withdraw'`,
+		username).Scan(&withdrawnBalance)
 	if err != nil {
 		return 0, err
 	}
@@ -45,16 +45,16 @@ func CreateTransaction(db *sql.DB, username string, orderNumber int64, amount fl
 		return err
 	}
 
-	if transactionType == "withdraw" && amount > user.Balance {
+	if transactionType == model.Withdraw && amount > user.Balance {
 		tx.Rollback()
 		return errors.New("insufficient funds (402)")
 	}
 
 	var newBalance float64
 	switch transactionType {
-	case "accrual":
+	case model.Accrual:
 		newBalance = user.Balance + amount
-	case "withdraw":
+	case model.Withdraw:
 		newBalance = user.Balance - amount
 	default:
 		tx.Rollback()
@@ -80,4 +80,29 @@ func CreateTransaction(db *sql.DB, username string, orderNumber int64, amount fl
 	}
 
 	return nil
+}
+
+func Getwithdrawals(db *sql.DB, userId int) ([]model.Transactions, error) {
+	Getwithdrawals := `
+	SELECT order_number, amount, updated_at 
+	FROM transactions 
+	WHERE user_id = $1 AND transactions_type = $2
+    ORDER BY updated_at DESC`
+
+	rows, err := db.Query(Getwithdrawals, userId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var withdrawals []model.Transactions
+	for rows.Next() {
+		var withdrawal model.Transactions
+		err := rows.Scan(&withdrawal.Order_number, &withdrawal.Amount, &withdrawal.Updated_at)
+		if err != nil {
+			return nil, err
+		}
+		withdrawals = append(withdrawals, withdrawal)
+	}
+	return withdrawals, nil
 }

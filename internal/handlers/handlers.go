@@ -300,7 +300,31 @@ func (s *Server) WithdrawBalance(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func GetWithdrawals(w http.ResponseWriter, r *http.Request) {
+func (s *Server) GetWithdrawals(w http.ResponseWriter, r *http.Request) {
+	username, ok := r.Context().Value(middleware.UserContextKey).(string)
+	if !ok {
+		http.Error(w, "User not found in context", http.StatusUnauthorized)
+		return
+	}
+	if r.Method != http.MethodGet {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	user, _ := auth.GetIdByUsername(s.Store.Db, username)
+
+	withdrawals, err := transactions.Getwithdrawals(s.Store.Db, user.Id)
+	if err != nil {
+		http.Error(w, "Failed fetching orders from DB:", http.StatusInternalServerError)
+		return
+	}
+
+	if len(withdrawals) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("GET /api/user/withdrawals"))
+	json.NewEncoder(w).Encode(withdrawals)
 }

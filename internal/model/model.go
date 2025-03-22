@@ -30,8 +30,8 @@ type Order struct {
 type T_type string // тип транзакции
 
 const (
-	Accrual   T_type = "accrual"   // пополнение
-	Withdrawn T_type = "withdrawn" // снятие
+	Accrual  T_type = "accrual"  // пополнение
+	Withdraw T_type = "withdraw" // снятие
 )
 
 type Transactions struct {

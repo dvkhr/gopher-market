@@ -45,7 +45,7 @@ func main() {
 			r.Get("/balance", server.GetBalance)
 
 			r.Post("/balance/withdraw", server.WithdrawBalance)
-			r.Get("/withdrawals", handlers.GetWithdrawals)
+			r.Get("/withdrawals", server.GetWithdrawals)
 		})
 	})
 
