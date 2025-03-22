@@ -3,6 +3,7 @@ package orders
 import (
 	"database/sql"
 	"errors"
+	"gopher-market/internal/auth"
 	"gopher-market/internal/logger"
 	"gopher-market/internal/model"
 )
@@ -71,4 +72,47 @@ func GetOrders(db *sql.DB, userID int) ([]model.Order, error) {
 	}
 
 	return orders, nil
+}
+
+func GetUnfinishedOrders(db *sql.DB) ([]string, error) {
+
+	GetOrders := `
+        SELECT order_number
+        FROM orders
+        WHERE status NOT IN ('invalid', 'processed')
+    `
+	rows, err := db.Query(GetOrders)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var orderNumbers []string
+	for rows.Next() {
+		var orderNumber string
+		err := rows.Scan(&orderNumber)
+		if err != nil {
+			return nil, err
+		}
+		orderNumbers = append(orderNumbers, orderNumber)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return orderNumbers, nil
+}
+
+func GetUserByOrderNumber(db *sql.DB, orderNumber string) (*model.User, error) {
+	var user model.User
+	err := db.QueryRow(" SELECT u.login FROM orders o JOIN users u ON o.user_id = u.user_id WHERE o.order_number = $1;", orderNumber).
+		Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Balance)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, auth.ErrUserNotFound
+		}
+		return nil, err
+	}
+	return &user, nil
 }

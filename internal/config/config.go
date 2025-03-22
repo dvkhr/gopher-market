@@ -34,7 +34,7 @@ func (cfg *Config) check() error {
 func (cfg *Config) ParseFlags() error {
 	flag.StringVar(&cfg.Address, "a", "localhost:8080", "Service address and port")
 	flag.StringVar(&cfg.DBDsn, "d", "postgres://admin:12345@localhost:5432/loyalty_bonus_system?sslmode=disable", "The database connection")
-	flag.StringVar(&cfg.Accrual, "r", "firfir", " Address of the accrual system")
+	flag.StringVar(&cfg.Accrual, "r", "localhost:8080", " Address of the accrual system")
 
 	flag.Parse()
 

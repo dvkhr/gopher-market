@@ -21,24 +21,6 @@ func (ms *Database) NewStorage(DBDSN string) error {
 		logger.Logg.Error("Couldn't connect to the database with an error", "error", err)
 		return err
 	}
-	//defer ms.Db.Close()
-	/*// Создание контекста с таймаутом
-	    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	    defer cancel()
-
-	    // Проверка подключения с использованием контекста
-	    err = db.PingContext(ctx)
-	    if err != nil {
-			logger.Logg.Error("Failed to ping database", "error", err)
-			return err
-	    }
-
-	conn, err := pgx.Connect(context.Background(), "postgres://username:password@localhost:5432/mydb")
-	if err != nil {
-		log.Fatalf("Unable to connect to database: %v\n", err)
-	}
-	defer conn.Close(context.Background())
-	*/
 
 	err = ms.initDBTables()
 	if err != nil {
@@ -85,16 +67,3 @@ func (ms *Database) initDBTables() error {
 	}
 	return errors.Join(errs...)
 }
-
-/*func (ms *Database) retry(f func() error, maxRetries int) error {
-	var err error
-	for i := 0; i < maxRetries; i++ {
-		err = f()
-		if err == nil {
-			return err
-		}
-		logger.Logg.Error("Database retry after error", "error", err)
-		time.Sleep(time.Duration(2*i+1) * time.Second)
-	}
-	return err
-}*/

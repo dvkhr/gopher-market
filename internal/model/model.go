@@ -22,7 +22,7 @@ type Order struct {
 	ID          int       `json:"id"`          //  уникальный идентификатор заказа
 	UserID      int       `json:"user_id"`     // уникальный идентификатор пользователя
 	OrderNumber int       `json:"number"`      // номер заказа
-	Accrual     float64   `json:"Accrual"`     // вознаграждение за заказ
+	Accrual     float64   `json:"accrual"`     // вознаграждение за заказ
 	UploadedAt  time.Time `json:"uploaded_at"` // время загрузки номера заказа time.RFC3339
 	Status      Status    `json:"status"`      // статус обработки заказа
 }
@@ -38,8 +38,8 @@ type Transactions struct {
 	ID               int       `json:"id"`                //  уникальный идентификатор транзакции
 	UserID           string    `json:"user_id"`           // уникальный идентификатор пользователя
 	OrderNumber      int       `json:"number"`            // номер заказа
-	Amount           float64   `json:"Amount"`            // сумма транзакции,  либо начисление (положительная, accrual), либо изъятие (отрицательная, withdrawn)
-	TransactionsType TType     `json:"Transactions_type"` // тип транзакции
+	Amount           float64   `json:"amount"`            // сумма транзакции,  либо начисление (положительная, accrual), либо изъятие (отрицательная, withdrawn)
+	TransactionsType TType     `json:"transactions_type"` // тип транзакции
 	UpdatedAt        time.Time `json:"updated_at"`        // дата последнего обновления баланса time.RFC3339
 
 }

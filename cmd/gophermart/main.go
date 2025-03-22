@@ -2,10 +2,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"gopher-market/internal/config"
 	"gopher-market/internal/handlers"
 	"gopher-market/internal/logger"
+	"gopher-market/internal/loyalty"
 	"gopher-market/internal/middleware"
+	"gopher-market/internal/orders"
+	"gopher-market/internal/transactions"
 	"net/http"
 	"os"
 	"os/signal"
@@ -27,9 +31,17 @@ func main() {
 		logger.Logg.Error("Server creation error", "error", err)
 		os.Exit(1)
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	pool := loyalty.NewWorkerPool(ctx, 10)
+	pool.Start()
+	defer pool.Stop()
+
+	resultChan := make(chan *loyalty.Accrual)
+	errorChan := make(chan error)
 
 	r := chi.NewRouter()
-
 	r.Route("/api/user", func(r chi.Router) {
 		r.Use(logger.LoggingMiddleware)
 		r.Post("/register", server.RegisterUser)
@@ -53,7 +65,8 @@ func main() {
 		Handler:      r,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  60 * time.Second}
+		IdleTimeout:  60 * time.Second,
+	}
 
 	go func() {
 		logger.Logg.Info("Starting server", "address", cfg.Address)
@@ -63,20 +76,73 @@ func main() {
 		}
 	}()
 
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case result := <-resultChan:
+				logger.Logg.Info("Order processed",
+					"order", result.Order,
+					"status", result.Status,
+					"accrual", result.Accrual,
+				)
+				if err := transactions.Update(server.Store.DB, result.Order, result.Status, result.Accrual); err != nil {
+					logger.Logg.Error("Failed to update order status",
+						"order", result.Order,
+						"error", err,
+					)
+				}
+			case err := <-errorChan:
+				if errors.Is(err, loyalty.ErrOrderNotRegistered) {
+					logger.Logg.Info("Order is not registered in the accrual system")
+				} else {
+					logger.Logg.Error("Error fetching accrual info", "error", err)
+				}
+			}
+		}
+	}()
+
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 
-	<-stop
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
 
-	logger.Logg.Info("Shutting down server gracefully")
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Logg.Info("Context canceled, stopping processing")
+			return
+		case <-stop:
+			logger.Logg.Info("Shutting down server gracefully")
+			if err := serv.Shutdown(ctx); err != nil {
+				logger.Logg.Error("Server shutdown error", "error", err)
+				os.Exit(1)
+			}
+			logger.Logg.Info("Server stopped")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
+		case <-ticker.C:
+			orderNumbers, err := orders.GetUnfinishedOrders(server.Store.DB)
+			if err != nil {
+				logger.Logg.Error("Failed to fetch unfinished orders", "error", err)
+				continue
+			}
 
-	if err := serv.Shutdown(ctx); err != nil {
-		logger.Logg.Error("Server shutdown error", "error", err)
-		os.Exit(1)
+			if len(orderNumbers) == 0 {
+				logger.Logg.Info("No unfinished orders found")
+				continue
+			}
+
+			for _, orderNumber := range orderNumbers {
+				task := loyalty.Task{
+					BaseURL:     server.Config.Accrual,
+					OrderNumber: orderNumber,
+					ResultChan:  resultChan,
+					ErrorChan:   errorChan,
+				}
+				pool.AddTask(task)
+			}
+		}
 	}
-
-	logger.Logg.Info("Server stopped")
 }

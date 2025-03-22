@@ -50,16 +50,7 @@ func CreateTransaction(db *sql.DB, username string, orderNumber int64, amount fl
 		return errors.New("insufficient funds (402)")
 	}
 
-	var newBalance float64
-	switch transactionType {
-	case model.Accrual:
-		newBalance = user.Balance + amount
-	case model.Withdraw:
-		newBalance = user.Balance - amount
-	default:
-		tx.Rollback()
-		return err
-	}
+	newBalance := user.Balance - amount
 
 	_, err = tx.Exec("UPDATE users SET current_balance = $1 WHERE user_id = $2", newBalance, user.ID)
 	if err != nil {
@@ -108,4 +99,44 @@ func Getwithdrawals(db *sql.DB, userID int) ([]model.Transactions, error) {
 		return nil, err
 	}
 	return withdrawals, nil
+}
+
+func Update(db *sql.DB, orderNumber, status string, accrual float64) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := recover(); err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	user, err := orders.GetUserByOrderNumber(db, orderNumber)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if accrual > 0 {
+		_, err = tx.Exec("INSERT INTO transactions (user_id, order_number, amount, transactions_type, updated_at) VALUES ($1, $2, $3, $4, $5)",
+			user.ID, orderNumber, accrual, model.Accrual, time.Now())
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	newBalance := user.Balance + accrual
+	_, err = tx.Exec("UPDATE users SET current_balance = $1 WHERE user_id = $2", newBalance, user.ID)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
