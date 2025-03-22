@@ -10,14 +10,14 @@ import (
 
 type Database struct {
 	DBDSN string
-	Db    *sql.DB
+	DB    *sql.DB
 }
 
 func (ms *Database) NewStorage(DBDSN string) error {
 	var err error
 	ms.DBDSN = DBDSN
 	logger.Logg.Info(DBDSN)
-	if ms.Db, err = sql.Open("pgx", ms.DBDSN); err != nil {
+	if ms.DB, err = sql.Open("pgx", ms.DBDSN); err != nil {
 		logger.Logg.Error("Couldn't connect to the database with an error", "error", err)
 		return err
 	}
@@ -78,7 +78,7 @@ func (ms *Database) initDBTables() error {
 	}
 
 	for _, s := range stmts {
-		_, err := ms.Db.Exec(s)
+		_, err := ms.DB.Exec(s)
 		if err != nil {
 			errs = append(errs, err)
 		}

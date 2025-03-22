@@ -37,7 +37,7 @@ func GetUserByLogin(db *sql.DB, login string) (*model.User, error) {
 	return &user, nil
 }
 
-func GetUserById(db *sql.DB, id int) (*model.User, error) {
+func GetUserByID(db *sql.DB, id int) (*model.User, error) {
 	var user model.User
 	err := db.QueryRow("SELECT user_id, login, password_hash, current_balance FROM users WHERE user_id = $1", id).
 		Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Balance)
@@ -50,7 +50,7 @@ func GetUserById(db *sql.DB, id int) (*model.User, error) {
 	return &user, nil
 }
 
-func GetIdByUsername(db *sql.DB, username string) (*model.User, error) {
+func GetIDByUsername(db *sql.DB, username string) (*model.User, error) {
 	var user model.User
 	err := db.QueryRow("SELECT user_id, login, password_hash, current_balance FROM users WHERE login = $1", username).
 		Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Balance)

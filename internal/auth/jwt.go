@@ -11,24 +11,24 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-const TOKEN_EXP = time.Hour * 24
-const SECRET_KEY = "supersecretkey"
+const TokenExp = time.Hour * 24
+const SecretKey = "supersecretkey"
 
 func GenerateToken(Username string) (string, error) {
 	claims := &Claims{
 		Username: Username,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(TOKEN_EXP)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(TokenExp)),
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(SECRET_KEY))
+	return token.SignedString([]byte(SecretKey))
 }
 
 func ParseToken(tokenString string) (string, error) {
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte(SECRET_KEY), nil
+		return []byte(SecretKey), nil
 	})
 	if err != nil || !token.Valid {
 		return "", err

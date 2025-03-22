@@ -57,7 +57,7 @@ func (s *Server) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = auth.CreateUser(s.Store.Db, requestBody.Login, passwordHash)
+	_, err = auth.CreateUser(s.Store.DB, requestBody.Login, passwordHash)
 	if err != nil {
 		http.Error(w, "Login already exists", http.StatusConflict)
 		return
@@ -88,7 +88,7 @@ func (s *Server) LoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := auth.GetUserByLogin(s.Store.Db, requestBody.Login)
+	user, err := auth.GetUserByLogin(s.Store.DB, requestBody.Login)
 	if err != nil {
 		http.Error(w, "The user does not exist", http.StatusUnauthorized)
 		return
@@ -124,7 +124,7 @@ func readRequestBody(r *http.Request) (string, error) {
 
 func (s *Server) CheckOrder(orNum, username string) (int, error) {
 	orderNumber := strings.TrimSpace(orNum)
-	if orderNumber == "" || !orders.Is_numeric(orderNumber) {
+	if orderNumber == "" || !orders.IsNumeric(orderNumber) {
 		return 0, errors.New("invalid order number format (StatusBadRequest)")
 	}
 	isValid, _ := luhn.IsValid(orderNumber)
@@ -137,10 +137,10 @@ func (s *Server) CheckOrder(orNum, username string) (int, error) {
 		return 0, errors.New("couldn't convert order number (StatusInternalServerError)")
 	}
 
-	order, err := orders.GetOrderByNumber(s.Store.Db, orderNumberInt)
+	order, err := orders.GetOrderByNumber(s.Store.DB, orderNumberInt)
 
 	if err == nil {
-		user, _ := auth.GetUserById(s.Store.Db, order.UserID)
+		user, _ := auth.GetUserByID(s.Store.DB, order.UserID)
 		if user.Username == username {
 			return 0, errors.New("the order was uploaded by the user (StatusOK)")
 		} else {
@@ -183,8 +183,8 @@ func (s *Server) UploadOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, _ := auth.GetIdByUsername(s.Store.Db, username)
-	_, err = orders.CreateOrder(s.Store.Db, user.ID, orderNumberInt)
+	user, _ := auth.GetIDByUsername(s.Store.DB, username)
+	_, err = orders.CreateOrder(s.Store.DB, user.ID, orderNumberInt)
 	if err != nil {
 		http.Error(w, "Failed registered new order", http.StatusInternalServerError)
 		return
@@ -208,9 +208,9 @@ func (s *Server) GetOrders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, _ := auth.GetIdByUsername(s.Store.Db, username)
+	user, _ := auth.GetIDByUsername(s.Store.DB, username)
 
-	orders, err := orders.GetOrders(s.Store.Db, user.ID)
+	orders, err := orders.GetOrders(s.Store.DB, user.ID)
 	if err != nil {
 		http.Error(w, "Failed fetching orders from DB:", http.StatusInternalServerError)
 		return
@@ -238,13 +238,13 @@ func (s *Server) GetBalance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := auth.GetUserByLogin(s.Store.Db, username)
+	user, err := auth.GetUserByLogin(s.Store.DB, username)
 	if err != nil {
 		http.Error(w, "The user does not exist", http.StatusInternalServerError)
 		return
 	}
 
-	withdrawnBalance, err := transactions.GetwithdrawnBalance(s.Store.Db, username)
+	withdrawnBalance, err := transactions.GetwithdrawnBalance(s.Store.DB, username)
 	if err != nil {
 		http.Error(w, "Failded get the withdrawn amount", http.StatusInternalServerError)
 		return
@@ -275,7 +275,7 @@ func (s *Server) WithdrawBalance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var transactionType model.TType = model.Withdraw
+	transactionType := model.Withdraw
 
 	var req Balance
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -289,7 +289,7 @@ func (s *Server) WithdrawBalance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = transactions.CreateTransaction(s.Store.Db, username, int64(orderNumberInt), req.Sum, transactionType)
+	err = transactions.CreateTransaction(s.Store.DB, username, int64(orderNumberInt), req.Sum, transactionType)
 	if err.Error() == "insufficient funds (402)" {
 		http.Error(w, "insufficient funds in the account", http.StatusPaymentRequired)
 		return
@@ -311,9 +311,9 @@ func (s *Server) GetWithdrawals(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, _ := auth.GetIdByUsername(s.Store.Db, username)
+	user, _ := auth.GetIDByUsername(s.Store.DB, username)
 
-	withdrawals, err := transactions.Getwithdrawals(s.Store.Db, user.ID)
+	withdrawals, err := transactions.Getwithdrawals(s.Store.DB, user.ID)
 	if err != nil {
 		http.Error(w, "Failed fetching orders from DB:", http.StatusInternalServerError)
 		return

@@ -33,12 +33,12 @@ func TestMain(m *testing.M) {
 
 func cleanupDatabase(testUser string) {
 	server, _ := NewServer(cfg)
-	err := server.Store.Db.Ping()
+	err := server.Store.DB.Ping()
 	if err != nil {
 		log.Fatalf("Database connection failed: %v", err)
 	}
 
-	tx, err := server.Store.Db.Begin()
+	tx, err := server.Store.DB.Begin()
 	if err != nil {
 		log.Fatalf("Failed to begin transaction: %v", err)
 	}

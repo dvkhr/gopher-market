@@ -82,14 +82,14 @@ func CreateTransaction(db *sql.DB, username string, orderNumber int64, amount fl
 	return nil
 }
 
-func Getwithdrawals(db *sql.DB, userId int) ([]model.Transactions, error) {
+func Getwithdrawals(db *sql.DB, userID int) ([]model.Transactions, error) {
 	Getwithdrawals := `
 	SELECT order_number, amount, updated_at 
 	FROM transactions 
 	WHERE user_id = $1 AND transactions_type = $2
     ORDER BY updated_at DESC`
 
-	rows, err := db.Query(Getwithdrawals, userId)
+	rows, err := db.Query(Getwithdrawals, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -103,6 +103,9 @@ func Getwithdrawals(db *sql.DB, userId int) ([]model.Transactions, error) {
 			return nil, err
 		}
 		withdrawals = append(withdrawals, withdrawal)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return withdrawals, nil
 }

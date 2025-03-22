@@ -10,9 +10,9 @@ import (
 var ErrOrderNotFound = errors.New("order not found")
 var ErrDuplicate = errors.New("ordernumber already exists")
 
-func GetOrderByNumber(db *sql.DB, order_number int) (*model.Order, error) {
+func GetOrderByNumber(db *sql.DB, orderNumber int) (*model.Order, error) {
 	var order model.Order
-	err := db.QueryRow("SELECT order_id, user_id, order_number, accrual, uploaded_at, status FROM orders WHERE order_number = $1", order_number).
+	err := db.QueryRow("SELECT order_id, user_id, order_number, accrual, uploaded_at, status FROM orders WHERE order_number = $1", orderNumber).
 		Scan(&order.ID, &order.UserID, &order.OrderNumber, &order.Accrual, &order.UploadedAt, &order.Status)
 
 	if err != nil {
@@ -24,12 +24,12 @@ func GetOrderByNumber(db *sql.DB, order_number int) (*model.Order, error) {
 	return &order, nil
 }
 
-func CreateOrder(db *sql.DB, userId int, orderNumber int) (int, error) {
+func CreateOrder(db *sql.DB, userID int, orderNumber int) (int, error) {
 	createOrder := `INSERT INTO orders(user_id, order_number, status) VALUES ($1, $2, $3) RETURNING order_id`
 
 	var id int
 
-	err := db.QueryRow(createOrder, userId, orderNumber, model.StatusNew).Scan(&id)
+	err := db.QueryRow(createOrder, userID, orderNumber, model.StatusNew).Scan(&id)
 	if err != nil {
 		logger.Logg.Info("err", "err", err)
 		if err == sql.ErrNoRows {
@@ -40,7 +40,7 @@ func CreateOrder(db *sql.DB, userId int, orderNumber int) (int, error) {
 	return id, nil
 }
 
-func GetOrders(db *sql.DB, userId int) ([]model.Order, error) {
+func GetOrders(db *sql.DB, userID int) ([]model.Order, error) {
 
 	GetOrders := `
         SELECT order_id, user_id, order_number, accrual, uploaded_at, status
@@ -48,7 +48,7 @@ func GetOrders(db *sql.DB, userId int) ([]model.Order, error) {
         WHERE user_id = $1
         ORDER BY uploaded_at DESC
     `
-	rows, err := db.Query(GetOrders, userId)
+	rows, err := db.Query(GetOrders, userID)
 	if err != nil {
 		return nil, err
 	}
