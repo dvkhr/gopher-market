@@ -1,7 +1,7 @@
 package loyalty
 
 type Accrual struct {
-	Order   string  `json:"order"`
+	Order   int     `json:"order"`
 	Status  string  `json:"status"`
 	Accrual float64 `json:"accrual"`
 }
