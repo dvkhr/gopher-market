@@ -66,14 +66,14 @@ func CreateTransactionWithdraw(db *sql.DB, username, orderNumber string, amount 
 	if err != nil {
 		logger.Logg.Error("Failed to commit transaction", "error", err)
 		return err
-	}*/
+	}
 
 	_, err = tx.Exec("INSERT INTO transactions (user_id, order_number, amount, transactions_type, updated_at) VALUES ($1, $2, $3, $4, $5)",
 		user.ID, orderNumber, amount, model.Withdraw, time.Now())
 	if err != nil {
 		logger.Logg.Error("Failed to commit transaction", "error", err)
 		return err
-	}
+	}*/
 
 	err = tx.Commit()
 	if err != nil {
