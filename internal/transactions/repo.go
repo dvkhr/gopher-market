@@ -22,7 +22,7 @@ func GetwithdrawnBalance(db *sql.DB, username string) (float64, error) {
 	return withdrawnBalance, nil
 }
 
-func CreateTransaction(db *sql.DB, username string, orderNumber int64, amount float64, transactionType model.TType) error {
+func CreateTransaction(db *sql.DB, username, orderNumber string, amount float64, transactionType model.TType) error {
 	tx, err := db.Begin()
 	if err != nil {
 		return err
@@ -39,7 +39,7 @@ func CreateTransaction(db *sql.DB, username string, orderNumber int64, amount fl
 		return err
 	}
 
-	_, err = orders.CreateOrder(db, user.ID, int(orderNumber))
+	_, err = orders.CreateOrder(db, user.ID, orderNumber)
 	if err != nil {
 		tx.Rollback()
 		return err

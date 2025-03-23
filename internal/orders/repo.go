@@ -11,7 +11,7 @@ import (
 var ErrOrderNotFound = errors.New("order not found")
 var ErrDuplicate = errors.New("ordernumber already exists")
 
-func GetOrderByNumber(db *sql.DB, orderNumber int) (*model.Order, error) {
+func GetOrderByNumber(db *sql.DB, orderNumber string) (*model.Order, error) {
 	var order model.Order
 	err := db.QueryRow("SELECT order_id, user_id, order_number, accrual, uploaded_at, status FROM orders WHERE order_number = $1", orderNumber).
 		Scan(&order.ID, &order.UserID, &order.OrderNumber, &order.Accrual, &order.UploadedAt, &order.Status)
@@ -25,7 +25,7 @@ func GetOrderByNumber(db *sql.DB, orderNumber int) (*model.Order, error) {
 	return &order, nil
 }
 
-func CreateOrder(db *sql.DB, userID int, orderNumber int) (int, error) {
+func CreateOrder(db *sql.DB, userID int, orderNumber string) (int, error) {
 	createOrder := `INSERT INTO orders(user_id, order_number, status) VALUES ($1, $2, $3) RETURNING order_id`
 
 	var id int

@@ -13,7 +13,6 @@ import (
 	"gopher-market/internal/transactions"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -122,32 +121,28 @@ func readRequestBody(r *http.Request) (string, error) {
 	return string(bodyBytes), nil
 }
 
-func (s *Server) CheckOrder(orNum, username string) (int, error) {
+func (s *Server) CheckOrder(orNum, username string) error {
 	orderNumber := strings.TrimSpace(orNum)
 	if orderNumber == "" || !orders.IsNumeric(orderNumber) {
-		return 0, errors.New("invalid order number format (StatusBadRequest)")
+		return errors.New("invalid order number format (StatusBadRequest)")
 	}
 	isValid, _ := luhn.IsValid(orderNumber)
 
 	if !isValid {
-		return 0, errors.New("invalid order number (StatusUnprocessableEntity)")
-	}
-	orderNumberInt, err := strconv.Atoi(orderNumber)
-	if err != nil {
-		return 0, errors.New("couldn't convert order number (StatusInternalServerError)")
+		return errors.New("invalid order number (StatusUnprocessableEntity)")
 	}
 
-	order, err := orders.GetOrderByNumber(s.Store.DB, orderNumberInt)
+	order, err := orders.GetOrderByNumber(s.Store.DB, orderNumber)
 
 	if err == nil {
 		user, _ := auth.GetUserByID(s.Store.DB, order.UserID)
 		if user.Username == username {
-			return 0, errors.New("the order was uploaded by the user (StatusOK)")
+			return errors.New("the order was uploaded by the user (StatusOK)")
 		} else {
-			return 0, errors.New("order number already uploaded by another use(StatusConflict)")
+			return errors.New("order number already uploaded by another use(StatusConflict)")
 		}
 	}
-	return orderNumberInt, nil
+	return nil
 }
 func (s *Server) UploadOrder(w http.ResponseWriter, r *http.Request) {
 	username, ok := r.Context().Value(middleware.UserContextKey).(string)
@@ -165,7 +160,7 @@ func (s *Server) UploadOrder(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to read request body", http.StatusBadRequest)
 		return
 	}
-	orderNumberInt, err := s.CheckOrder(body, username)
+	err = s.CheckOrder(body, username)
 	if err != nil {
 		switch err.Error() {
 		case "invalid order number (StatusUnprocessableEntity)":
@@ -184,7 +179,7 @@ func (s *Server) UploadOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, _ := auth.GetIDByUsername(s.Store.DB, username)
-	_, err = orders.CreateOrder(s.Store.DB, user.ID, orderNumberInt)
+	_, err = orders.CreateOrder(s.Store.DB, user.ID, body)
 	if err != nil {
 		http.Error(w, "Failed registered new order", http.StatusInternalServerError)
 		return
@@ -253,8 +248,8 @@ func (s *Server) GetBalance(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]float64{
-		"current": user.Balance,
-		"token":   withdrawnBalance,
+		"current":   user.Balance,
+		"withdrawn": withdrawnBalance,
 	})
 }
 
@@ -282,14 +277,14 @@ func (s *Server) WithdrawBalance(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
-	orderNumberInt, err := s.CheckOrder(req.Order, username)
+	err := s.CheckOrder(req.Order, username)
 
 	if err != nil {
 		http.Error(w, "Incorrect order number", http.StatusUnprocessableEntity)
 		return
 	}
 
-	err = transactions.CreateTransaction(s.Store.DB, username, int64(orderNumberInt), req.Sum, transactionType)
+	err = transactions.CreateTransaction(s.Store.DB, username, req.Order, req.Sum, transactionType)
 	if err.Error() == "insufficient funds (402)" {
 		http.Error(w, "insufficient funds in the account", http.StatusPaymentRequired)
 		return
