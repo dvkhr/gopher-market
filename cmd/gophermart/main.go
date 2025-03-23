@@ -49,7 +49,7 @@ func main() {
 
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.Auth)
-			r.Use(logger.LoggingMiddleware)
+			//r.Use(logger.LoggingMiddleware)
 			r.Post("/orders", server.UploadOrder)
 			r.Get("/orders", server.GetOrders)
 
