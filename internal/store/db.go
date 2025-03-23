@@ -35,26 +35,26 @@ func (ms *Database) initDBTables() error {
 	stmts := []string{
 		`create table if not exists users ( 
 			user_id BIGSERIAL PRIMARY KEY, 
-			login VARCHAR(255) NOT NULL UNIQUE, 
-			password_hash  VARCHAR(255), 
+			login VARCHAR(100) NOT NULL UNIQUE, 
+			password_hash  VARCHAR(60), 
 			current_balance DECIMAL(10, 2) DEFAULT 0.00 
 		);`,
 
 		`create table if not exists orders (
 			order_id BIGSERIAL PRIMARY KEY,
 			user_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE, 
-			order_number BIGINT NOT NULL UNIQUE, 
+			order_number VARCHAR(30) NOT NULL UNIQUE, 
 			accrual DECIMAL(10, 2) DEFAULT 0.00,         
 			uploaded_at TIMESTAMP NOT NULL default (now() at time zone 'utc'),                
-			status VARCHAR(50) NOT NULL
+			status VARCHAR(30) NOT NULL DEFAULT 'NEW'
 		);`,
 
 		`create table if not exists transactions (
     		id BIGSERIAL PRIMARY KEY,                   
     		user_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE, 
-    		order_number BIGINT NOT NULL,                 
+    		order_number VARCHAR(30) NOT NULL,                 
     		amount DECIMAL(10, 2) NOT NULL,            
-    		transactions_type VARCHAR(50) NOT NULL,   
+    		transactions_type VARCHAR(30) NOT NULL,   
     		updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP 
 		);`,
 	}
