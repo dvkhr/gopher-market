@@ -43,7 +43,7 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Route("/api/user", func(r chi.Router) {
-		r.Use(logger.LoggingMiddleware)
+		//	r.Use(logger.LoggingMiddleware)
 		r.Post("/register", server.RegisterUser)
 		r.Post("/login", server.LoginUser)
 
