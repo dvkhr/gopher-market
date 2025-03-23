@@ -37,7 +37,7 @@ func CreateTransactionWithdraw(db *sql.DB, username, orderNumber string, amount 
 		}
 	}()
 
-	user, err := orders.GetUserByOrderNumber(db, orderNumber)
+	user, err := auth.GetUserByLogin(db, username)
 	if err != nil {
 		logger.Logg.Error("Failed to commit transaction", "error", err)
 		return err
