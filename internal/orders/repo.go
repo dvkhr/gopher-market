@@ -79,7 +79,7 @@ func GetUnfinishedOrders(db *sql.DB) ([]string, error) {
 	GetOrders := `
         SELECT order_number
         FROM orders
-        WHERE status NOT IN ('invalid', 'processed')
+        WHERE status NOT IN ('INVALID', 'PROCESSED')
     `
 	rows, err := db.Query(GetOrders)
 	if err != nil {
