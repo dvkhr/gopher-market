@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"gopher-market/internal/auth"
 	"gopher-market/internal/config"
+	"gopher-market/internal/logger"
 	"gopher-market/internal/middleware"
 	"gopher-market/internal/model"
 	"gopher-market/internal/orders"
@@ -277,8 +278,17 @@ func (s *Server) WithdrawBalance(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
+	logger.Logg.Info("Req balance",
+		"order", req.Order,
+		"sum", req.Sum,
+	)
+
 	err := s.CheckOrder(req.Order, username)
 
+	logger.Logg.Info("CheckOrder",
+		"username", username,
+		"err", err,
+	)
 	if err != nil {
 		http.Error(w, "Incorrect order number", http.StatusUnprocessableEntity)
 		return
