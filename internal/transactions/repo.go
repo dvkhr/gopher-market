@@ -12,11 +12,17 @@ import (
 
 func GetwithdrawnBalance(db *sql.DB, username string) (float32, error) {
 	var withdrawnBalance float32
+	user, _ := auth.GetUserByLogin(db, username)
+	logger.Logg.Info("Order processed",
+		"Username", user.Username,
+		"Balance", user.Balance,
+	)
+
 	err := db.QueryRow(` 
 	SELECT COALESCE(SUM(amount), 0) 
         FROM transactions 
         WHERE user_id = $1 AND transactions_type = 'withdraw'`,
-		username).Scan(&withdrawnBalance)
+		user.ID).Scan(&withdrawnBalance)
 	if err != nil {
 		return 0, err
 	}

@@ -178,7 +178,7 @@ func (s *Server) UploadOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, _ := auth.GetIDByUsername(s.Store.DB, username)
+	user, _ := auth.GetUserByLogin(s.Store.DB, username)
 	_, err = orders.CreateOrder(s.Store.DB, user.ID, body)
 	if err != nil {
 		http.Error(w, "Failed registered new order", http.StatusInternalServerError)
@@ -203,7 +203,7 @@ func (s *Server) GetOrders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, _ := auth.GetIDByUsername(s.Store.DB, username)
+	user, _ := auth.GetUserByLogin(s.Store.DB, username)
 
 	orders, err := orders.GetOrders(s.Store.DB, user.ID)
 	if err != nil {
@@ -306,7 +306,7 @@ func (s *Server) GetWithdrawals(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, _ := auth.GetIDByUsername(s.Store.DB, username)
+	user, _ := auth.GetUserByLogin(s.Store.DB, username)
 
 	withdrawals, err := transactions.Getwithdrawals(s.Store.DB, user.ID)
 	if err != nil {

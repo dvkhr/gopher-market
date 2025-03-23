@@ -90,12 +90,6 @@ func main() {
 				)
 
 				order, _ := orders.GetOrderByNumber(server.Store.DB, result.Order)
-				logger.Logg.Info("order status BD",
-					"order", order.OrderNumber,
-					"status", order.Status,
-					"accrual", order.Accrual,
-				)
-
 				if order.Status != model.StatusProcessed && order.Status != model.StatusInvalid {
 					if err := transactions.Update(server.Store.DB, result.Order, result.Status, result.Accrual); err != nil {
 						logger.Logg.Error("Failed to update order status",
@@ -103,24 +97,7 @@ func main() {
 							"error", err,
 						)
 					}
-					order, _ = orders.GetOrderByNumber(server.Store.DB, result.Order)
-					logger.Logg.Info("update",
-						"order", order.OrderNumber,
-						"status", order.Status,
-						"accrual", order.Accrual,
-					)
 				}
-				order, _ = orders.GetOrderByNumber(server.Store.DB, result.Order)
-				logger.Logg.Info("order",
-					"order", order.OrderNumber,
-					"status", order.Status,
-					"accrual", order.Accrual,
-				)
-				user, _ := orders.GetUserByOrderNumber(server.Store.DB, result.Order)
-				logger.Logg.Info("User processed",
-					"username", user.Username,
-					"balance", user.Balance,
-				)
 
 			case err := <-errorChan:
 				if errors.Is(err, loyalty.ErrOrderNotRegistered) {
