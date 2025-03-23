@@ -60,7 +60,7 @@ func CreateTransactionWithdraw(db *sql.DB, username, orderNumber string, amount 
 		return errors.New("insufficient funds (402)")
 	}
 
-	newBalance := user.Balance - amount
+	//newBalance := user.Balance - amount
 
 	/*_, err = tx.Exec("UPDATE users SET current_balance = $1 WHERE user_id = $2", newBalance, user.ID)
 	if err != nil {
