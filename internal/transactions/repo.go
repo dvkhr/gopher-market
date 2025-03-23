@@ -29,6 +29,7 @@ func GetwithdrawnBalance(db *sql.DB, username string) (float32, error) {
 }
 
 func CreateTransactionWithdraw(db *sql.DB, user *model.User, orderNumber string, amount float32) error {
+	logger.Logg.Info("Process withdraw")
 	tx, err := db.Begin()
 	if err != nil {
 		return err
@@ -43,6 +44,7 @@ func CreateTransactionWithdraw(db *sql.DB, user *model.User, orderNumber string,
 	if amount > user.Balance {
 		return ErrInsufficientFunds
 	}
+	logger.Logg.Info("Amount checked")
 
 	_, err = tx.Exec("INSERT INTO transactions (user_id, order_number, amount, transactions_type, updated_at) VALUES ($1, $2, $3, $4, $5)",
 		user.ID, orderNumber, amount, model.Withdraw, time.Now())
@@ -50,6 +52,7 @@ func CreateTransactionWithdraw(db *sql.DB, user *model.User, orderNumber string,
 		logger.Logg.Error("Failed to commit transaction", "error", err)
 		return err
 	}
+	logger.Logg.Info("Transaction created")
 
 	newBalance := user.Balance - amount
 
@@ -58,12 +61,14 @@ func CreateTransactionWithdraw(db *sql.DB, user *model.User, orderNumber string,
 		logger.Logg.Error("Failed to commit transaction", "error", err)
 		return err
 	}
+	logger.Logg.Info("User updated")
 
 	err = tx.Commit()
 	if err != nil {
 		logger.Logg.Error("Failed to commit transaction", "error", err)
 		return err
 	}
+	logger.Logg.Info("Database commited")
 
 	return nil
 }
