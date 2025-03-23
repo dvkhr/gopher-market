@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+var ErrInsufficientFunds = errors.New("insufficient funds (402)")
+
 func GetwithdrawnBalance(db *sql.DB, username string) (float32, error) {
 	var withdrawnBalance float32
 	user, _ := auth.GetUserByLogin(db, username)
@@ -38,7 +40,7 @@ func CreateTransactionWithdraw(db *sql.DB, user *model.User, orderNumber string,
 	}()
 
 	if amount > user.Balance {
-		return errors.New("insufficient funds (402)")
+		return ErrInsufficientFunds
 	}
 
 	_, err = tx.Exec("INSERT INTO transactions (user_id, order_number, amount, transactions_type, updated_at) VALUES ($1, $2, $3, $4, $5)",
