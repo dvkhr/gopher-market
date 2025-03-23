@@ -304,26 +304,26 @@ func (s *Server) WithdrawBalance(w http.ResponseWriter, r *http.Request) {
 		"err", err,
 	)
 
-	/*err = transactions.CreateTransactionWithdraw(s.Store.DB, username, req.Order, req.Sum)
+	err = transactions.CreateTransactionWithdraw(s.Store.DB, username, req.Order, req.Sum)
 	if err.Error() == "insufficient funds (402)" {
 		logger.Logg.Error("insufficient funds", "err", err)
 
 		http.Error(w, "insufficient funds in the account", http.StatusPaymentRequired)
 		return
 	} else {
-		user, _ = auth.GetUserByLogin(s.Store.DB, username)
-		logger.Logg.Info("user",
-			"user", user.Username,
-			"balance", user.Balance,
-		)
 		logger.Logg.Error("err", "err", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
-	}*/
+	}
 	user, _ = auth.GetUserByLogin(s.Store.DB, username)
 	logger.Logg.Info("user",
 		"user", user.Username,
 		"balance", user.Balance,
 	)
+	_, err = orders.CreateOrder(s.Store.DB, user.ID, req.Order)
+	if err != nil {
+		logger.Logg.Error("Failed to create order", "orderNumber", req.Order, "error", err)
+	}
+
 	w.WriteHeader(http.StatusOK)
 }
 
