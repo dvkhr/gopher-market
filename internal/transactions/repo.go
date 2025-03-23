@@ -25,7 +25,7 @@ func GetwithdrawnBalance(db *sql.DB, username string) (float32, error) {
 	return withdrawnBalance, nil
 }
 
-func CreateTransactionWithdraw(db *sql.DB, username, orderNumber string, amount float32) error {
+func CreateTransactionWithdraw(db *sql.DB, user *model.User, orderNumber string, amount float32) error {
 	tx, err := db.Begin()
 	if err != nil {
 		return err
@@ -36,12 +36,6 @@ func CreateTransactionWithdraw(db *sql.DB, username, orderNumber string, amount 
 			logger.Logg.Error("Failed to commit transaction", "error", err)
 		}
 	}()
-
-	user, err := auth.GetUserByLogin(db, username)
-	if err != nil {
-		logger.Logg.Error("Failed to commit transaction", "error", err)
-		return err
-	}
 
 	if amount > user.Balance {
 		return errors.New("insufficient funds (402)")

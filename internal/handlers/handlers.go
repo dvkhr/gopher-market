@@ -304,7 +304,7 @@ func (s *Server) WithdrawBalance(w http.ResponseWriter, r *http.Request) {
 		"err", err,
 	)
 
-	err = transactions.CreateTransactionWithdraw(s.Store.DB, username, req.Order, req.Sum)
+	err = transactions.CreateTransactionWithdraw(s.Store.DB, user, req.Order, req.Sum)
 	if err.Error() == "insufficient funds (402)" {
 		logger.Logg.Error("insufficient funds", "err", err)
 
