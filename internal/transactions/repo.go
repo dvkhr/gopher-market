@@ -3,7 +3,6 @@ package transactions
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"gopher-market/internal/auth"
 	"gopher-market/internal/logger"
 	"gopher-market/internal/model"
@@ -29,45 +28,46 @@ func GetwithdrawnBalance(db *sql.DB, username string) (float32, error) {
 func CreateTransactionWithdraw(db *sql.DB, username, orderNumber string, amount float32) error {
 	tx, err := db.Begin()
 	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
+		return err
 	}
 	defer func() {
-		if err != nil && tx != nil {
-			if rollbackErr := tx.Rollback(); rollbackErr != nil {
-				logger.Logg.Error("Failed to rollback transaction", "error", rollbackErr)
-			}
+		if err != nil {
+			tx.Rollback()
+			logger.Logg.Error("Failed to commit transaction", "error", err)
 		}
 	}()
 
-	user, err := auth.GetUserByLogin(db, username)
+	user, err := orders.GetUserByOrderNumber(db, orderNumber)
 	if err != nil {
-		return fmt.Errorf("failed to fetch user by login: %w", err)
-	}
-	if user == nil {
-		return auth.ErrUserNotFound
+		logger.Logg.Error("Failed to commit transaction", "error", err)
+		return err
 	}
 
 	if amount > user.Balance {
 		return errors.New("insufficient funds (402)")
 	}
 
+	_, err = tx.Exec("INSERT INTO transactions (user_id, order_number, amount, transactions_type, updated_at) VALUES ($1, $2, $3, $4, $5)",
+		user.ID, orderNumber, amount, model.Withdraw, time.Now())
+	if err != nil {
+		logger.Logg.Error("Failed to commit transaction", "error", err)
+		return err
+	}
+
 	newBalance := user.Balance - amount
 
 	_, err = tx.Exec("UPDATE users SET current_balance = $1 WHERE user_id = $2", newBalance, user.ID)
 	if err != nil {
-		return fmt.Errorf("failed to update user balance: %w", err)
-	}
-
-	_, err = tx.Exec("INSERT INTO transactions (user_id, order_number, amount, transactions_type, updated_at) VALUES ($1, $2, $3, $4, $5)",
-		user.ID, orderNumber, amount, model.Withdraw, time.Now())
-	if err != nil {
-		return fmt.Errorf("failed to insert transaction: %w", err)
+		logger.Logg.Error("Failed to commit transaction", "error", err)
+		return err
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
+		logger.Logg.Error("Failed to commit transaction", "error", err)
+		return err
 	}
+
 	return nil
 }
 
