@@ -298,7 +298,7 @@ func (s *Server) WithdrawBalance(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logger.Logg.Info("CreateTransactionWithdraw",
-		"username", username,
+		"username", user.Username,
 		" req.Order", req.Order,
 		" req.Sum", req.Sum,
 		"err", err,
