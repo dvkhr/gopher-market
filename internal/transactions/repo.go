@@ -2,7 +2,6 @@ package transactions
 
 import (
 	"database/sql"
-	"fmt"
 	"gopher-market/internal/auth"
 	"gopher-market/internal/logger"
 	"gopher-market/internal/model"
@@ -39,7 +38,7 @@ func CreateTransactionWithdraw(db *sql.DB, username, orderNumber string, amount 
 		}
 	}()
 
-	user, err := auth.GetUserByLogin(db, username)
+	/*user, err := auth.GetUserByLogin(db, username)
 	if err != nil {
 		logger.Logg.Error("Failed to fetch user by login", "username", username, "error", err)
 		return fmt.Errorf("failed to fetch user by login: %w", err)
@@ -49,7 +48,7 @@ func CreateTransactionWithdraw(db *sql.DB, username, orderNumber string, amount 
 		return fmt.Errorf("user not found")
 	}
 
-	/*_, err = orders.CreateOrder(db, user.ID, orderNumber)
+	_, err = orders.CreateOrder(db, user.ID, orderNumber)
 		if err != nil {
 			logger.Logg.Error("Failed to create order", "orderNumber", orderNumber, "error", err)
 			return fmt.Errorf("failed to create order: %w", err)
