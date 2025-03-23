@@ -29,25 +29,22 @@ func GetwithdrawnBalance(db *sql.DB, username string) (float32, error) {
 func CreateTransactionWithdraw(db *sql.DB, username, orderNumber string, amount float32) error {
 	tx, err := db.Begin()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer func() {
 		if err != nil && tx != nil {
 			if rollbackErr := tx.Rollback(); rollbackErr != nil {
 				logger.Logg.Error("Failed to rollback transaction", "error", rollbackErr)
 			}
-			logger.Logg.Error("Failed to commit transaction", "error", err)
 		}
 	}()
 
 	user, err := auth.GetUserByLogin(db, username)
 	if err != nil {
-		logger.Logg.Error("Failed to fetch user by login", "username", username, "error", err)
 		return fmt.Errorf("failed to fetch user by login: %w", err)
 	}
 	if user == nil {
-		logger.Logg.Error("User not found", "username", username)
-		return fmt.Errorf("user not found")
+		return auth.ErrUserNotFound
 	}
 
 	if amount > user.Balance {
@@ -55,25 +52,22 @@ func CreateTransactionWithdraw(db *sql.DB, username, orderNumber string, amount 
 	}
 
 	newBalance := user.Balance - amount
+
 	_, err = tx.Exec("UPDATE users SET current_balance = $1 WHERE user_id = $2", newBalance, user.ID)
 	if err != nil {
-		logger.Logg.Error("Failed to commit transaction", "error", err)
-		return err
+		return fmt.Errorf("failed to update user balance: %w", err)
 	}
 
 	_, err = tx.Exec("INSERT INTO transactions (user_id, order_number, amount, transactions_type, updated_at) VALUES ($1, $2, $3, $4, $5)",
 		user.ID, orderNumber, amount, model.Withdraw, time.Now())
 	if err != nil {
-		logger.Logg.Error("Failed to commit transaction", "error", err)
-		return err
+		return fmt.Errorf("failed to insert transaction: %w", err)
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		logger.Logg.Error("Failed to commit transaction", "error", err)
-		return err
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
-
 	return nil
 }
 
