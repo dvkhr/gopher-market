@@ -116,7 +116,8 @@ func Update(db *sql.DB, orderNumber string, status string, accrual float32) erro
 	order, _ := orders.GetOrderByNumber(db, orderNumber)
 	if order.Status == model.StatusProcessed || order.Status == model.StatusInvalid {
 		logger.Logg.Info("The order status is final")
-		return err
+		tx.Rollback()
+		return nil
 	}
 
 	user, err := orders.GetUserByOrderNumber(db, orderNumber)
