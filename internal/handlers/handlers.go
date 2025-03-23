@@ -139,7 +139,7 @@ func (s *Server) CheckOrder(orNum, username string) error {
 		if user.Username == username {
 			return errors.New("the order was uploaded by the user (StatusOK)")
 		} else {
-			return errors.New("order number already uploaded by another use(StatusConflict)")
+			return errors.New("order number already uploaded by another user(StatusConflict)")
 		}
 	}
 	return nil

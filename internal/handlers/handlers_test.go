@@ -209,9 +209,15 @@ func TestLoginUser(t *testing.T) {
 	})
 }
 
-func mockAuthMiddleware(next http.Handler) http.Handler {
+func mockAuthMiddlewareTestUser1(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), middleware.UserContextKey, "testuser")
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+func mockAuthMiddlewareTestUser2(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), middleware.UserContextKey, "testuser2")
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -220,10 +226,9 @@ func TestUploadOrder(t *testing.T) {
 
 	r := chi.NewRouter()
 
-	r.Use(mockAuthMiddleware)
-	r.Post("/api/user/orders", server.UploadOrder)
-
 	t.Run("Valid new order number", func(t *testing.T) {
+		r.Use(mockAuthMiddlewareTestUser1)
+		r.Post("/api/user/orders", server.UploadOrder)
 		reqBody := strings.NewReader("7601295780")
 		req, _ := http.NewRequest(http.MethodPost, "/api/user/orders", reqBody)
 		req.Header.Set("Content-Type", "text/plain")
@@ -247,6 +252,8 @@ func TestUploadOrder(t *testing.T) {
 		}
 	})
 	t.Run("Duplicate order number by same user", func(t *testing.T) {
+		r.Use(mockAuthMiddlewareTestUser1)
+		r.Post("/api/user/orders", server.UploadOrder)
 
 		reqBody := strings.NewReader("7601295780")
 		req, _ := http.NewRequest(http.MethodPost, "/api/user/orders", reqBody)
@@ -258,6 +265,22 @@ func TestUploadOrder(t *testing.T) {
 
 		if rr.Code != http.StatusOK {
 			t.Errorf("Expected status 200, got %d", rr.Code)
+		}
+	})
+	t.Run("Duplicate order number by other user", func(t *testing.T) {
+		r.Use(mockAuthMiddlewareTestUser2)
+		r.Post("/api/user/orders", server.UploadOrder)
+
+		reqBody := strings.NewReader("7601295780")
+		req, _ := http.NewRequest(http.MethodPost, "/api/user/orders", reqBody)
+		req.Header.Set("Content-Type", "text/plain")
+
+		rr := httptest.NewRecorder()
+
+		r.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusConflict {
+			t.Errorf("Expected status 409, got %d", rr.Code)
 		}
 	})
 }
