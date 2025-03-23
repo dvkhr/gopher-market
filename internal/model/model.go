@@ -12,10 +12,11 @@ type User struct {
 type Status string
 
 const (
-	StatusNew        Status = "new"        //заказ загружен в систему, но не попал в обработку
-	StatusProcessing Status = "processing" //вознаграждение за заказ рассчитывается
-	StatusInvalid    Status = "invalid"    // система расчёта вознаграждений отказала в расчёте
-	StatusProcessed  Status = "processed"  //данные по заказу проверены и информация о расчёте успешно получена
+	StatusNew        Status = "NEW"        //заказ загружен в систему, но не попал в обработку
+	StatusRegistred  Status = "REGISTERED" //заказ загружен в систему, но не попал в обработку
+	StatusProcessing Status = "PROCESSING" //вознаграждение за заказ рассчитывается
+	StatusInvalid    Status = "INVALID"    // система расчёта вознаграждений отказала в расчёте
+	StatusProcessed  Status = "PROCESSED"  //данные по заказу проверены и информация о расчёте успешно получена
 )
 
 type Order struct {
