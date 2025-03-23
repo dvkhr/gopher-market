@@ -3,10 +3,10 @@ package model
 import "time"
 
 type User struct {
-	ID           int     `json:"user_id"`         //  уникальный идентификатор пользователя
-	Username     string  `json:"login"`           // имя пользователя
-	PasswordHash string  `json:"password_hash"`   // хэш пароля пользователя
-	Balance      float32 `json:"current_balance"` // текущий баланс пользователя
+	ID           int     `json:"user_id,omitempty"`         //  уникальный идентификатор пользователя
+	Username     string  `json:"login,omitempty"`           // имя пользователя
+	PasswordHash string  `json:"password_hash,omitempty"`   // хэш пароля пользователя
+	Balance      float32 `json:"current_balance,omitempty"` // текущий баланс пользователя
 }
 
 type Status string
@@ -20,12 +20,12 @@ const (
 )
 
 type Order struct {
-	ID          int       `json:"id"`          //  уникальный идентификатор заказа
-	UserID      int       `json:"user_id"`     // уникальный идентификатор пользователя
-	OrderNumber string    `json:"number"`      // номер заказа
-	Accrual     float32   `json:"accrual"`     // вознаграждение за заказ
-	UploadedAt  time.Time `json:"uploaded_at"` // время загрузки номера заказа time.RFC3339
-	Status      Status    `json:"status"`      // статус обработки заказа
+	ID          int       `json:"id,omitempty"`          //  уникальный идентификатор заказа
+	UserID      int       `json:"user_id,omitempty"`     // уникальный идентификатор пользователя
+	OrderNumber string    `json:"number,omitempty"`      // номер заказа
+	Accrual     float32   `json:"accrual,omitempty"`     // вознаграждение за заказ
+	UploadedAt  time.Time `json:"uploaded_at,omitempty"` // время загрузки номера заказа time.RFC3339
+	Status      Status    `json:"status,omitempty"`      // статус обработки заказа
 }
 
 type TType string // тип транзакции
@@ -36,11 +36,11 @@ const (
 )
 
 type Transactions struct {
-	ID               int       `json:"id"`                //  уникальный идентификатор транзакции
-	UserID           string    `json:"user_id"`           // уникальный идентификатор пользователя
-	OrderNumber      string    `json:"number"`            // номер заказа
-	Amount           float32   `json:"amount"`            // сумма транзакции,  либо начисление (положительная, accrual), либо изъятие (отрицательная, withdrawn)
-	TransactionsType TType     `json:"transactions_type"` // тип транзакции
-	UpdatedAt        time.Time `json:"updated_at"`        // дата последнего обновления баланса time.RFC3339
+	ID               int       `json:"id,omitempty"`                //  уникальный идентификатор транзакции
+	UserID           string    `json:"user_id,omitempty"`           // уникальный идентификатор пользователя
+	OrderNumber      string    `json:"number,omitempty"`            // номер заказа
+	Amount           float32   `json:"amount,omitempty"`            // сумма транзакции,  либо начисление (положительная, accrual), либо изъятие (отрицательная, withdrawn)
+	TransactionsType TType     `json:"transactions_type,omitempty"` // тип транзакции
+	UpdatedAt        time.Time `json:"updated_at,omitempty"`        // дата последнего обновления баланса time.RFC3339
 
 }

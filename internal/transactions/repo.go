@@ -20,8 +20,8 @@ func GetwithdrawnBalance(db *sql.DB, username string) (float32, error) {
 	err := db.QueryRow(` 
 	SELECT COALESCE(SUM(amount), 0) 
         FROM transactions 
-        WHERE user_id = $1 AND transactions_type = 'withdraw'`,
-		user.ID).Scan(&withdrawnBalance)
+        WHERE user_id = $1 AND transactions_type = $2`,
+		user.ID, model.Withdraw).Scan(&withdrawnBalance)
 	if err != nil {
 		return 0, err
 	}
