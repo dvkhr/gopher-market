@@ -75,7 +75,7 @@ func Getwithdrawals(db *sql.DB, userID int) ([]model.Transactions, error) {
 	WHERE user_id = $1 AND transactions_type = $2
     ORDER BY updated_at DESC`
 
-	rows, err := db.Query(Getwithdrawals, userID)
+	rows, err := db.Query(Getwithdrawals, userID, model.Withdraw)
 	if err != nil {
 		return nil, err
 	}
