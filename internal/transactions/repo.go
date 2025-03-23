@@ -107,7 +107,7 @@ func Update(db *sql.DB, orderNumber string, status string, accrual float64) erro
 		return err
 	}
 	defer func() {
-		if err := recover(); err != nil {
+		if err != nil {
 			tx.Rollback()
 		}
 	}()
@@ -133,7 +133,7 @@ func Update(db *sql.DB, orderNumber string, status string, accrual float64) erro
 		tx.Rollback()
 		return err
 	}
-	_, err = tx.Exec("UPDATE orders SET accrual = $1 status = $2 WHERE order_id = $3", accrual, status, orderNumber)
+	_, err = tx.Exec("UPDATE orders SET accrual = $1, status = $2 WHERE order_id = $3", accrual, status, orderNumber)
 	if err != nil {
 		tx.Rollback()
 		return err
