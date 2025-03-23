@@ -102,6 +102,11 @@ func main() {
 							"error", err,
 						)
 					}
+					order, _ = orders.GetOrderByNumber(server.Store.DB, result.Order)
+					logger.Logg.Error("order status before update",
+						"order", order.OrderNumber,
+						"status", order.Status,
+					)
 				}
 
 				user, _ := orders.GetUserByOrderNumber(server.Store.DB, result.Order)
