@@ -25,7 +25,7 @@ func GetwithdrawnBalance(db *sql.DB, username string) (float32, error) {
 	return withdrawnBalance, nil
 }
 
-func CreateTransaction(db *sql.DB, username, orderNumber string, amount float32, transactionType model.TType) error {
+func CreateTransactionWithdraw(db *sql.DB, username, orderNumber string, amount float32) error {
 	tx, err := db.Begin()
 	if err != nil {
 		return err

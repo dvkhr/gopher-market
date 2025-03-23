@@ -8,7 +8,6 @@ import (
 	"gopher-market/internal/config"
 	"gopher-market/internal/logger"
 	"gopher-market/internal/middleware"
-	"gopher-market/internal/model"
 	"gopher-market/internal/orders"
 	"gopher-market/internal/store"
 	"gopher-market/internal/transactions"
@@ -266,12 +265,16 @@ func (s *Server) WithdrawBalance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	user, _ := auth.GetUserByLogin(s.Store.DB, username)
+	logger.Logg.Info("user",
+		"user", user.Username,
+		"balance", user.Balance,
+	)
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 		return
 	}
-
-	transactionType := model.Withdraw
 
 	var req Balance
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -294,14 +297,33 @@ func (s *Server) WithdrawBalance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = transactions.CreateTransaction(s.Store.DB, username, req.Order, req.Sum, transactionType)
+	logger.Logg.Info("CreateTransactionWithdraw",
+		"username", username,
+		" req.Order", req.Order,
+		" req.Sum", req.Sum,
+		"err", err,
+	)
+
+	err = transactions.CreateTransactionWithdraw(s.Store.DB, username, req.Order, req.Sum)
 	if err.Error() == "insufficient funds (402)" {
+		logger.Logg.Error("insufficient funds", "err", err)
+
 		http.Error(w, "insufficient funds in the account", http.StatusPaymentRequired)
 		return
 	} else {
+		user, _ = auth.GetUserByLogin(s.Store.DB, username)
+		logger.Logg.Info("user",
+			"user", user.Username,
+			"balance", user.Balance,
+		)
+		logger.Logg.Error("err", "err", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
-
+	user, _ = auth.GetUserByLogin(s.Store.DB, username)
+	logger.Logg.Info("user",
+		"user", user.Username,
+		"balance", user.Balance,
+	)
 	w.WriteHeader(http.StatusOK)
 }
 
