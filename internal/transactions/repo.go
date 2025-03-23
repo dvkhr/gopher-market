@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"gopher-market/internal/auth"
+	"gopher-market/internal/logger"
 	"gopher-market/internal/model"
 	"gopher-market/internal/orders"
 	"time"
@@ -109,20 +110,21 @@ func Update(db *sql.DB, orderNumber string, status string, accrual float32) erro
 	defer func() {
 		if err != nil {
 			tx.Rollback()
+			logger.Logg.Error("Failed to commit transaction", "error", err)
 		}
 	}()
 
 	user, err := orders.GetUserByOrderNumber(db, orderNumber)
 	if err != nil {
-		tx.Rollback()
+		logger.Logg.Error("Failed to commit transaction", "error", err)
 		return err
 	}
 
-	if accrual > 0 {
+	if accrual >= 0 {
 		_, err = tx.Exec("INSERT INTO transactions (user_id, order_number, amount, transactions_type, updated_at) VALUES ($1, $2, $3, $4, $5)",
 			user.ID, orderNumber, accrual, model.Accrual, time.Now())
 		if err != nil {
-			tx.Rollback()
+			logger.Logg.Error("Failed to commit transaction", "error", err)
 			return err
 		}
 	}
@@ -130,17 +132,18 @@ func Update(db *sql.DB, orderNumber string, status string, accrual float32) erro
 	newBalance := user.Balance + accrual
 	_, err = tx.Exec("UPDATE users SET current_balance = $1 WHERE user_id = $2", newBalance, user.ID)
 	if err != nil {
-		tx.Rollback()
+		logger.Logg.Error("Failed to commit transaction", "error", err)
 		return err
 	}
 	_, err = tx.Exec("UPDATE orders SET accrual = $1, status = $2 WHERE order_id = $3", accrual, status, orderNumber)
 	if err != nil {
-		tx.Rollback()
+		logger.Logg.Error("Failed to commit transaction", "error", err)
 		return err
 	}
 
 	err = tx.Commit()
 	if err != nil {
+		logger.Logg.Error("Failed to commit transaction", "error", err)
 		return err
 	}
 
