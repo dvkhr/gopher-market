@@ -117,6 +117,7 @@ func main() {
 		case <-stop:
 			logger.Logg.Info("Shutting down server gracefully")
 			pool.Stop()
+			pool.Wait()
 			if err := serv.Shutdown(ctx); err != nil {
 				logger.Logg.Error("Server shutdown error", "error", err)
 				os.Exit(1)

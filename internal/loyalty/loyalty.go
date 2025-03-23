@@ -32,6 +32,8 @@ type WorkerPool struct {
 	maxWorkers int
 	ctx        context.Context
 	cancel     context.CancelFunc
+	closed     bool
+	mu         sync.Mutex
 }
 
 func NewWorkerPool(ctx context.Context, maxWorkers int) *WorkerPool {
@@ -51,8 +53,16 @@ func (wp *WorkerPool) Start() {
 }
 
 func (wp *WorkerPool) Stop() {
-	close(wp.tasks)
+	wp.mu.Lock()
+	defer wp.mu.Unlock()
+
+	if !wp.closed {
+		close(wp.tasks)
+		wp.cancel()
+		wp.closed = true
+	}
 	wp.wg.Wait()
+
 }
 
 func (wp *WorkerPool) AddTask(task Task) {
@@ -99,7 +109,11 @@ func (wp *WorkerPool) processTask(task Task) error {
 			if err != nil {
 				return fmt.Errorf("failed to decode response: %w", err)
 			}
-			task.ResultChan <- &accrualResponse
+			select {
+			case <-wp.ctx.Done():
+				return wp.ctx.Err()
+			case task.ResultChan <- &accrualResponse:
+			}
 			return nil
 		case http.StatusNoContent:
 			return ErrOrderNotRegistered
@@ -140,4 +154,7 @@ func parseRetryAfter(retryAfter string) time.Duration {
 	}
 
 	return 1 * time.Second
+}
+func (wp *WorkerPool) Wait() {
+	wp.wg.Wait()
 }
