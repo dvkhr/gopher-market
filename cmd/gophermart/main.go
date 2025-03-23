@@ -93,6 +93,12 @@ func main() {
 						"error", err,
 					)
 				}
+				user, _ := orders.GetUserByOrderNumber(server.Store.DB, result.Order)
+				logger.Logg.Info("User processed",
+					"username", user.Username,
+					"balance", user.Balance,
+				)
+
 			case err := <-errorChan:
 				if errors.Is(err, loyalty.ErrOrderNotRegistered) {
 					logger.Logg.Info("Order is not registered in the accrual system")
