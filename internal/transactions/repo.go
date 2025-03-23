@@ -135,7 +135,7 @@ func Update(db *sql.DB, orderNumber string, status string, accrual float32) erro
 		logger.Logg.Error("Failed to commit transaction", "error", err)
 		return err
 	}
-	_, err = tx.Exec("UPDATE orders SET accrual = $1, status = $2 WHERE order_id = $3", accrual, status, orderNumber)
+	_, err = tx.Exec("UPDATE orders SET accrual = $1, status = $2 WHERE order_number = $3", accrual, status, orderNumber)
 	if err != nil {
 		logger.Logg.Error("Failed to commit transaction", "error", err)
 		return err
