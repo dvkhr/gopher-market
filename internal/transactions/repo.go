@@ -95,9 +95,11 @@ func Getwithdrawals(db *sql.DB, userID int) ([]model.Transactions, error) {
 		}
 		withdrawals = append(withdrawals, withdrawal)
 	}
+	logger.Logg.Info("Got rows", "rows", withdrawals)
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+	logger.Logg.Info("Ok")
 	return withdrawals, nil
 }
 
