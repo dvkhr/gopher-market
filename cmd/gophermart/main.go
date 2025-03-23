@@ -31,7 +31,7 @@ func main() {
 		logger.Logg.Error("Server creation error", "error", err)
 		os.Exit(1)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
 	pool := loyalty.NewWorkerPool(ctx, 10)
@@ -116,6 +116,7 @@ func main() {
 			return
 		case <-stop:
 			logger.Logg.Info("Shutting down server gracefully")
+			pool.Stop()
 			if err := serv.Shutdown(ctx); err != nil {
 				logger.Logg.Error("Server shutdown error", "error", err)
 				os.Exit(1)
