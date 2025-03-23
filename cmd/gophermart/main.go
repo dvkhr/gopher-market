@@ -8,6 +8,7 @@ import (
 	"gopher-market/internal/logger"
 	"gopher-market/internal/loyalty"
 	"gopher-market/internal/middleware"
+	"gopher-market/internal/model"
 	"gopher-market/internal/orders"
 	"gopher-market/internal/transactions"
 	"net/http"
@@ -87,12 +88,22 @@ func main() {
 					"status", result.Status,
 					"accrual", result.Accrual,
 				)
-				if err := transactions.Update(server.Store.DB, result.Order, result.Status, result.Accrual); err != nil {
-					logger.Logg.Error("Failed to update order status",
-						"order", result.Order,
-						"error", err,
-					)
+
+				order, _ := orders.GetOrderByNumber(server.Store.DB, result.Order)
+				logger.Logg.Error("order status",
+					"order", order.OrderNumber,
+					"status", order.Status,
+				)
+
+				if order.Status != model.StatusProcessed && order.Status != model.StatusInvalid {
+					if err := transactions.Update(server.Store.DB, result.Order, result.Status, result.Accrual); err != nil {
+						logger.Logg.Error("Failed to update order status",
+							"order", result.Order,
+							"error", err,
+						)
+					}
 				}
+
 				user, _ := orders.GetUserByOrderNumber(server.Store.DB, result.Order)
 				logger.Logg.Info("User processed",
 					"username", user.Username,
