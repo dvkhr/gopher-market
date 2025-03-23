@@ -13,10 +13,6 @@ import (
 func GetwithdrawnBalance(db *sql.DB, username string) (float32, error) {
 	var withdrawnBalance float32
 	user, _ := auth.GetUserByLogin(db, username)
-	logger.Logg.Info("Order processed",
-		"Username", user.Username,
-		"Balance", user.Balance,
-	)
 
 	err := db.QueryRow(` 
 	SELECT COALESCE(SUM(amount), 0) 
@@ -35,25 +31,23 @@ func CreateTransaction(db *sql.DB, username, orderNumber string, amount float32,
 		return err
 	}
 	defer func() {
-		if err := recover(); err != nil {
+		if err != nil {
 			tx.Rollback()
+			logger.Logg.Error("Failed to commit transaction", "error", err)
 		}
 	}()
 
 	user, err := auth.GetUserByLogin(db, username)
 	if err != nil {
-		tx.Rollback()
 		return err
 	}
 
 	_, err = orders.CreateOrder(db, user.ID, orderNumber)
 	if err != nil {
-		tx.Rollback()
 		return err
 	}
 
-	if transactionType == model.Withdraw && amount > user.Balance {
-		tx.Rollback()
+	if amount > user.Balance {
 		return errors.New("insufficient funds (402)")
 	}
 
@@ -61,19 +55,20 @@ func CreateTransaction(db *sql.DB, username, orderNumber string, amount float32,
 
 	_, err = tx.Exec("UPDATE users SET current_balance = $1 WHERE user_id = $2", newBalance, user.ID)
 	if err != nil {
-		tx.Rollback()
+		logger.Logg.Error("Failed to commit transaction", "error", err)
 		return err
 	}
 
 	_, err = tx.Exec("INSERT INTO transactions (user_id, order_number, amount, transactions_type, updated_at) VALUES ($1, $2, $3, $4, $5)",
-		user.ID, orderNumber, amount, transactionType, time.Now())
+		user.ID, orderNumber, amount, model.Withdraw, time.Now())
 	if err != nil {
-		tx.Rollback()
+		logger.Logg.Error("Failed to commit transaction", "error", err)
 		return err
 	}
 
 	err = tx.Commit()
 	if err != nil {
+		logger.Logg.Error("Failed to commit transaction", "error", err)
 		return err
 	}
 
