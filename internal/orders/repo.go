@@ -106,7 +106,10 @@ func GetUnfinishedOrders(db *sql.DB) ([]string, error) {
 
 func GetUserByOrderNumber(db *sql.DB, orderNumber string) (*model.User, error) {
 	var user model.User
-	err := db.QueryRow(" SELECT u.login FROM orders o JOIN users u ON o.user_id = u.user_id WHERE o.order_number = $1;", orderNumber).
+	err := db.QueryRow(`
+	SELECT u.user_id, u.login, u.password_hash, u.current_balance,  
+	FROM orders o JOIN users u ON o.user_id = u.user_id 
+	WHERE o.order_number = $1;`, orderNumber).
 		Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Balance)
 	if err != nil {
 		if err == sql.ErrNoRows {
