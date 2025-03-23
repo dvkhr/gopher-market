@@ -90,9 +90,10 @@ func main() {
 				)
 
 				order, _ := orders.GetOrderByNumber(server.Store.DB, result.Order)
-				logger.Logg.Error("order status",
+				logger.Logg.Info("order status BD",
 					"order", order.OrderNumber,
 					"status", order.Status,
+					"accrual", order.Accrual,
 				)
 
 				if order.Status != model.StatusProcessed && order.Status != model.StatusInvalid {
@@ -103,9 +104,10 @@ func main() {
 						)
 					}
 					order, _ = orders.GetOrderByNumber(server.Store.DB, result.Order)
-					logger.Logg.Error("order status before update",
+					logger.Logg.Info("order status after update",
 						"order", order.OrderNumber,
 						"status", order.Status,
+						"accrual", order.Accrual,
 					)
 				}
 
