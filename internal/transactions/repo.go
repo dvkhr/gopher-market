@@ -3,6 +3,7 @@ package transactions
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"gopher-market/internal/auth"
 	"gopher-market/internal/logger"
 	"gopher-market/internal/model"
@@ -31,20 +32,28 @@ func CreateTransactionWithdraw(db *sql.DB, username, orderNumber string, amount 
 		return err
 	}
 	defer func() {
-		if err != nil {
-			tx.Rollback()
+		if err != nil && tx != nil {
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				logger.Logg.Error("Failed to rollback transaction", "error", rollbackErr)
+			}
 			logger.Logg.Error("Failed to commit transaction", "error", err)
 		}
 	}()
 
 	user, err := auth.GetUserByLogin(db, username)
 	if err != nil {
-		return err
+		logger.Logg.Error("Failed to fetch user by login", "username", username, "error", err)
+		return fmt.Errorf("failed to fetch user by login: %w", err)
+	}
+	if user == nil {
+		logger.Logg.Error("User not found", "username", username)
+		return fmt.Errorf("user not found")
 	}
 
 	_, err = orders.CreateOrder(db, user.ID, orderNumber)
 	if err != nil {
-		return err
+		logger.Logg.Error("Failed to create order", "orderNumber", orderNumber, "error", err)
+		return fmt.Errorf("failed to create order: %w", err)
 	}
 
 	if amount > user.Balance {
