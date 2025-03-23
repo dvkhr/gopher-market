@@ -62,18 +62,18 @@ func CreateTransactionWithdraw(db *sql.DB, username, orderNumber string, amount 
 
 	newBalance := user.Balance - amount
 
-	_, err = tx.Exec("UPDATE users SET current_balance = $1 WHERE user_id = $2", newBalance, user.ID)
-	if err != nil {
-		logger.Logg.Error("Failed to commit transaction", "error", err)
-		return err
-	}
-
-	/*_, err = tx.Exec("INSERT INTO transactions (user_id, order_number, amount, transactions_type, updated_at) VALUES ($1, $2, $3, $4, $5)",
-		user.ID, orderNumber, amount, model.Withdraw, time.Now())
+	/*_, err = tx.Exec("UPDATE users SET current_balance = $1 WHERE user_id = $2", newBalance, user.ID)
 	if err != nil {
 		logger.Logg.Error("Failed to commit transaction", "error", err)
 		return err
 	}*/
+
+	_, err = tx.Exec("INSERT INTO transactions (user_id, order_number, amount, transactions_type, updated_at) VALUES ($1, $2, $3, $4, $5)",
+		user.ID, orderNumber, amount, model.Withdraw, time.Now())
+	if err != nil {
+		logger.Logg.Error("Failed to commit transaction", "error", err)
+		return err
+	}
 
 	err = tx.Commit()
 	if err != nil {
