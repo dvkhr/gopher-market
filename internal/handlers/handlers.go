@@ -247,7 +247,7 @@ func (s *Server) GetBalance(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]float64{
+	json.NewEncoder(w).Encode(map[string]float32{
 		"current":   user.Balance,
 		"withdrawn": withdrawnBalance,
 	})
@@ -255,7 +255,7 @@ func (s *Server) GetBalance(w http.ResponseWriter, r *http.Request) {
 
 type Balance struct {
 	Order string  `json:"order"` // Номер заказа
-	Sum   float64 `json:"sum"`   // Сумма баллов
+	Sum   float32 `json:"sum"`   // Сумма баллов
 }
 
 func (s *Server) WithdrawBalance(w http.ResponseWriter, r *http.Request) {

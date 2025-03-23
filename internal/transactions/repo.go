@@ -9,8 +9,8 @@ import (
 	"time"
 )
 
-func GetwithdrawnBalance(db *sql.DB, username string) (float64, error) {
-	var withdrawnBalance float64
+func GetwithdrawnBalance(db *sql.DB, username string) (float32, error) {
+	var withdrawnBalance float32
 	err := db.QueryRow(` 
 	SELECT COALESCE(SUM(amount), 0) 
         FROM transactions 
@@ -22,7 +22,7 @@ func GetwithdrawnBalance(db *sql.DB, username string) (float64, error) {
 	return withdrawnBalance, nil
 }
 
-func CreateTransaction(db *sql.DB, username, orderNumber string, amount float64, transactionType model.TType) error {
+func CreateTransaction(db *sql.DB, username, orderNumber string, amount float32, transactionType model.TType) error {
 	tx, err := db.Begin()
 	if err != nil {
 		return err
@@ -101,7 +101,7 @@ func Getwithdrawals(db *sql.DB, userID int) ([]model.Transactions, error) {
 	return withdrawals, nil
 }
 
-func Update(db *sql.DB, orderNumber string, status string, accrual float64) error {
+func Update(db *sql.DB, orderNumber string, status string, accrual float32) error {
 	tx, err := db.Begin()
 	if err != nil {
 		return err

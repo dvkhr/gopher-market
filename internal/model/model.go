@@ -6,7 +6,7 @@ type User struct {
 	ID           int     `json:"user_id"`         //  уникальный идентификатор пользователя
 	Username     string  `json:"login"`           // имя пользователя
 	PasswordHash string  `json:"password_hash"`   // хэш пароля пользователя
-	Balance      float64 `json:"current_balance"` // текущий баланс пользователя
+	Balance      float32 `json:"current_balance"` // текущий баланс пользователя
 }
 
 type Status string
@@ -23,7 +23,7 @@ type Order struct {
 	ID          int       `json:"id"`          //  уникальный идентификатор заказа
 	UserID      int       `json:"user_id"`     // уникальный идентификатор пользователя
 	OrderNumber string    `json:"number"`      // номер заказа
-	Accrual     float64   `json:"accrual"`     // вознаграждение за заказ
+	Accrual     float32   `json:"accrual"`     // вознаграждение за заказ
 	UploadedAt  time.Time `json:"uploaded_at"` // время загрузки номера заказа time.RFC3339
 	Status      Status    `json:"status"`      // статус обработки заказа
 }
@@ -39,7 +39,7 @@ type Transactions struct {
 	ID               int       `json:"id"`                //  уникальный идентификатор транзакции
 	UserID           string    `json:"user_id"`           // уникальный идентификатор пользователя
 	OrderNumber      string    `json:"number"`            // номер заказа
-	Amount           float64   `json:"amount"`            // сумма транзакции,  либо начисление (положительная, accrual), либо изъятие (отрицательная, withdrawn)
+	Amount           float32   `json:"amount"`            // сумма транзакции,  либо начисление (положительная, accrual), либо изъятие (отрицательная, withdrawn)
 	TransactionsType TType     `json:"transactions_type"` // тип транзакции
 	UpdatedAt        time.Time `json:"updated_at"`        // дата последнего обновления баланса time.RFC3339
 
