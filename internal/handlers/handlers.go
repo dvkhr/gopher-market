@@ -297,15 +297,7 @@ func (s *Server) WithdrawBalance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logger.Logg.Info("CreateTransactionWithdraw",
-		"username", user.Username,
-		" req.Order", req.Order,
-		" req.Sum", req.Sum,
-		"err", err,
-	)
-
 	err = transactions.CreateTransactionWithdraw(s.Store.DB, user, req.Order, req.Sum)
-	//if err.Error() == "insufficient funds (402)" {
 	if err != nil {
 		if err == transactions.ErrInsufficientFunds {
 			logger.Logg.Error("insufficient funds", "err", err)
@@ -327,18 +319,27 @@ func (s *Server) WithdrawBalance(w http.ResponseWriter, r *http.Request) {
 func (s *Server) GetWithdrawals(w http.ResponseWriter, r *http.Request) {
 	username, ok := r.Context().Value(middleware.UserContextKey).(string)
 	if !ok {
+		logger.Logg.Error("User not found in context")
 		http.Error(w, "User not found in context", http.StatusUnauthorized)
 		return
 	}
 	if r.Method != http.MethodGet {
+		logger.Logg.Error("Invalid request method")
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 		return
 	}
 
 	user, _ := auth.GetUserByLogin(s.Store.DB, username)
 
+	logger.Logg.Info("GetUserByLogin",
+		"username", user.Username,
+		"id", user.ID,
+	)
+
 	withdrawals, err := transactions.Getwithdrawals(s.Store.DB, user.ID)
 	if err != nil {
+		logger.Logg.Error("Getwithdrawals", "err", err)
+
 		http.Error(w, "Failed fetching orders from DB:", http.StatusInternalServerError)
 		return
 	}
