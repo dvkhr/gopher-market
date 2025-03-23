@@ -113,12 +113,6 @@ func Update(db *sql.DB, orderNumber string, status string, accrual float32) erro
 			logger.Logg.Error("Failed to commit transaction", "error", err)
 		}
 	}()
-	order, _ := orders.GetOrderByNumber(db, orderNumber)
-	if order.Status == model.StatusProcessed || order.Status == model.StatusInvalid {
-		logger.Logg.Info("The order status is final")
-		tx.Rollback()
-		return nil
-	}
 
 	user, err := orders.GetUserByOrderNumber(db, orderNumber)
 	if err != nil {
