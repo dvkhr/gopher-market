@@ -104,13 +104,18 @@ func main() {
 						)
 					}
 					order, _ = orders.GetOrderByNumber(server.Store.DB, result.Order)
-					logger.Logg.Info("order status after update",
+					logger.Logg.Info("update",
 						"order", order.OrderNumber,
 						"status", order.Status,
 						"accrual", order.Accrual,
 					)
 				}
-
+				order, _ = orders.GetOrderByNumber(server.Store.DB, result.Order)
+				logger.Logg.Info("order",
+					"order", order.OrderNumber,
+					"status", order.Status,
+					"accrual", order.Accrual,
+				)
 				user, _ := orders.GetUserByOrderNumber(server.Store.DB, result.Order)
 				logger.Logg.Info("User processed",
 					"username", user.Username,

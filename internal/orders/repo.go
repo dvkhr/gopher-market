@@ -32,7 +32,7 @@ func CreateOrder(db *sql.DB, userID int, orderNumber string) (int, error) {
 
 	err := db.QueryRow(createOrder, userID, orderNumber, model.StatusNew).Scan(&id)
 	if err != nil {
-		logger.Logg.Info("err", "err", err)
+		logger.Logg.Error("err", "err", err)
 		if err == sql.ErrNoRows {
 			return 0, ErrDuplicate
 		}
