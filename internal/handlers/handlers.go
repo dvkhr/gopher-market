@@ -210,13 +210,13 @@ func (s *Server) GetOrders(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed fetching orders from DB:", http.StatusInternalServerError)
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 
 	if len(orders) == 0 {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(orders)
 }
