@@ -38,9 +38,9 @@ const (
 type Transactions struct {
 	ID               int       `json:"id,omitempty"`                //  уникальный идентификатор транзакции
 	UserID           string    `json:"user_id,omitempty"`           // уникальный идентификатор пользователя
-	OrderNumber      string    `json:"number,omitempty"`            // номер заказа
-	Amount           float32   `json:"amount,omitempty"`            // сумма транзакции,  либо начисление (положительная, accrual), либо изъятие (отрицательная, withdrawn)
+	OrderNumber      string    `json:"order,omitempty"`             // номер заказа
+	Amount           float32   `json:"sum,omitempty"`               // сумма транзакции,  либо начисление (положительная, accrual), либо изъятие (отрицательная, withdrawn)
 	TransactionsType TType     `json:"transactions_type,omitempty"` // тип транзакции
-	UpdatedAt        time.Time `json:"updated_at,omitempty"`        // дата последнего обновления баланса time.RFC3339
+	UpdatedAt        time.Time `json:"processed_at,omitempty"`      // дата последнего обновления баланса time.RFC3339
 
 }
