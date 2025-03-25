@@ -3,7 +3,7 @@ package auth
 import (
 	"context"
 	"database/sql"
-	"gopher-market/internal/logger"
+	"gopher-market/internal/logging"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -31,15 +31,15 @@ func CheckPassLog(db *sql.DB, login, password string) (bool, error) {
 	err := db.QueryRowContext(ctx, query, login).Scan(&storedHash)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			logger.Logg.Error("User not found", "error", err)
+			logging.Logg.Error("User not found", "error", err)
 			return false, nil
 		}
-		logger.Logg.Error("Failed to query user", "error", err)
+		logging.Logg.Error("Failed to query user", "error", err)
 		return false, err
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(password))
 	if err != nil {
-		logger.Logg.Error("The password failed", "error", err)
+		logging.Logg.Error("The password failed", "error", err)
 		return false, nil
 	}
 	return true, nil
@@ -47,13 +47,13 @@ func CheckPassLog(db *sql.DB, login, password string) (bool, error) {
 func LoginUser(db *sql.DB, login, password string) error {
 	isValid, err := CheckPassLog(db, login, password)
 	if err != nil {
-		logger.Logg.Error("Failed checkPass", "error", err)
+		logging.Logg.Error("Failed checkPass", "error", err)
 	}
 
 	if isValid {
-		logger.Logg.Info("Login successful!")
+		logging.Logg.Info("Login successful!")
 	} else {
-		logger.Logg.Info("Invalid login or password.")
+		logging.Logg.Info("Invalid login or password.")
 	}
 	return nil
 }

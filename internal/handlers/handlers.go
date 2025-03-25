@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"gopher-market/internal/auth"
 	"gopher-market/internal/config"
-	"gopher-market/internal/logger"
+	"gopher-market/internal/logging"
 	"gopher-market/internal/middleware"
 	"gopher-market/internal/orders"
 	"gopher-market/internal/store"
@@ -266,7 +266,7 @@ func (s *Server) WithdrawBalance(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, _ := auth.GetUserByLogin(s.Store.DB, username)
-	logger.Logg.Info("user",
+	logging.Logg.Info("user",
 		"user", user.Username,
 		"balance", user.Balance,
 	)
@@ -281,14 +281,14 @@ func (s *Server) WithdrawBalance(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
-	logger.Logg.Info("Req balance",
+	logging.Logg.Info("Req balance",
 		"order", req.Order,
 		"sum", req.Sum,
 	)
 
 	err := s.CheckOrder(req.Order, username)
 
-	logger.Logg.Info("CheckOrder",
+	logging.Logg.Info("CheckOrder",
 		"username", username,
 		"err", err,
 	)
@@ -300,17 +300,17 @@ func (s *Server) WithdrawBalance(w http.ResponseWriter, r *http.Request) {
 	err = transactions.CreateTransactionWithdraw(s.Store.DB, user, req.Order, req.Sum)
 	if err != nil {
 		if err == transactions.ErrInsufficientFunds {
-			logger.Logg.Error("insufficient funds", "err", err)
+			logging.Logg.Error("insufficient funds", "err", err)
 			http.Error(w, "insufficient funds in the account", http.StatusPaymentRequired)
 		} else {
-			logger.Logg.Error("err", "err", err)
+			logging.Logg.Error("err", "err", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 		}
 	}
 
 	_, err = orders.CreateOrder(s.Store.DB, user.ID, req.Order)
 	if err != nil {
-		logger.Logg.Error("Failed to create order", "orderNumber", req.Order, "error", err)
+		logging.Logg.Error("Failed to create order", "orderNumber", req.Order, "error", err)
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -319,26 +319,26 @@ func (s *Server) WithdrawBalance(w http.ResponseWriter, r *http.Request) {
 func (s *Server) GetWithdrawals(w http.ResponseWriter, r *http.Request) {
 	username, ok := r.Context().Value(middleware.UserContextKey).(string)
 	if !ok {
-		logger.Logg.Error("User not found in context")
+		logging.Logg.Error("User not found in context")
 		http.Error(w, "User not found in context", http.StatusUnauthorized)
 		return
 	}
 	if r.Method != http.MethodGet {
-		logger.Logg.Error("Invalid request method")
+		logging.Logg.Error("Invalid request method")
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 		return
 	}
 
 	user, _ := auth.GetUserByLogin(s.Store.DB, username)
 
-	logger.Logg.Info("GetUserByLogin",
+	logging.Logg.Info("GetUserByLogin",
 		"username", user.Username,
 		"id", user.ID,
 	)
 
 	withdrawals, err := transactions.Getwithdrawals(s.Store.DB, user.ID)
 	if err != nil {
-		logger.Logg.Error("Getwithdrawals", "err", err)
+		logging.Logg.Error("Getwithdrawals", "err", err)
 
 		http.Error(w, "Failed fetching orders from DB:", http.StatusInternalServerError)
 		return

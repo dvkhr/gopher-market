@@ -3,9 +3,10 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"gopher-market/internal/config"
 	"gopher-market/internal/handlers"
-	"gopher-market/internal/logger"
+	"gopher-market/internal/logging"
 	"gopher-market/internal/loyalty"
 	"gopher-market/internal/middleware"
 	"gopher-market/internal/model"
@@ -20,16 +21,25 @@ import (
 )
 
 func main() {
+	logging.Logg = logging.NewLogger("debug", "text", "json", "both", "logs/2006-01-02.log")
+	if logging.Logg == nil {
+		fmt.Println("Failed to initialize logger")
+		os.Exit(1)
+	}
+
 	var cfg config.Config
 	err := cfg.ParseFlags()
 	if err != nil {
-		logger.Logg.Error("Server configuration error", "error", err)
+		logging.Logg.Error("Server configuration error: %v", err)
 		os.Exit(1)
 	}
-	logger.Logg.Info("cfg", "cfg", cfg.DBDsn)
+
+	logging.Logg.Info("cfg", "cfg", cfg.DBDsn)
 	server, err := handlers.NewServer(cfg)
+	logging.Logg.Info("cfg", "cfg", cfg.DBDsn)
+
 	if err != nil {
-		logger.Logg.Error("Server creation error", "error", err)
+		logging.Logg.Error("Server creation error", "error", err)
 		os.Exit(1)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
@@ -44,7 +54,7 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Route("/api/user", func(r chi.Router) {
-		//	r.Use(logger.LoggingMiddleware)
+		r.Use(middleware.LoggingMiddleware(logging.Logg))
 		r.Post("/register", server.RegisterUser)
 		r.Post("/login", server.LoginUser)
 
@@ -70,9 +80,9 @@ func main() {
 	}
 
 	go func() {
-		logger.Logg.Info("Starting server", "address", cfg.Address)
+		logging.Logg.Info("Starting server", "address", cfg.Address)
 		if err := serv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Logg.Error("Server failed to start", "error", err)
+			logging.Logg.Error("Server failed to start", "error", err)
 			os.Exit(1)
 		}
 	}()
@@ -83,7 +93,7 @@ func main() {
 			case <-ctx.Done():
 				return
 			case result := <-resultChan:
-				logger.Logg.Info("Order processed",
+				logging.Logg.Info("Order processed",
 					"order", result.Order,
 					"status", result.Status,
 					"accrual", result.Accrual,
@@ -92,7 +102,7 @@ func main() {
 				order, _ := orders.GetOrderByNumber(server.Store.DB, result.Order)
 				if order.Status != model.StatusProcessed && order.Status != model.StatusInvalid {
 					if err := transactions.Update(server.Store.DB, result.Order, result.Status, result.Accrual); err != nil {
-						logger.Logg.Error("Failed to update order status",
+						logging.Logg.Error("Failed to update order status",
 							"order", result.Order,
 							"error", err,
 						)
@@ -101,9 +111,9 @@ func main() {
 
 			case err := <-errorChan:
 				if errors.Is(err, loyalty.ErrOrderNotRegistered) {
-					logger.Logg.Info("Order is not registered in the accrual system")
+					logging.Logg.Info("Order is not registered in the accrual system")
 				} else {
-					logger.Logg.Error("Error fetching accrual info", "error", err)
+					logging.Logg.Error("Error fetching accrual info", "error", err)
 				}
 			}
 		}
@@ -118,27 +128,27 @@ func main() {
 	for {
 		select {
 		case <-ctx.Done():
-			logger.Logg.Info("Context canceled, stopping processing")
+			logging.Logg.Info("Context canceled, stopping processing")
 			return
 		case <-stop:
-			logger.Logg.Info("Shutting down server gracefully")
+			logging.Logg.Info("Shutting down server gracefully")
 			pool.Stop()
 			pool.Wait()
 			if err := serv.Shutdown(ctx); err != nil {
-				logger.Logg.Error("Server shutdown error", "error", err)
+				logging.Logg.Error("Server shutdown error", "error", err)
 				os.Exit(1)
 			}
-			logger.Logg.Info("Server stopped")
+			logging.Logg.Info("Server stopped")
 
 		case <-ticker.C:
 			orderNumbers, err := orders.GetUnfinishedOrders(server.Store.DB)
 			if err != nil {
-				logger.Logg.Error("Failed to fetch unfinished orders", "error", err)
+				logging.Logg.Error("Failed to fetch unfinished orders", "error", err)
 				continue
 			}
 
 			if len(orderNumbers) == 0 {
-				logger.Logg.Info("No unfinished orders found")
+				logging.Logg.Info("No unfinished orders found")
 				continue
 			}
 
