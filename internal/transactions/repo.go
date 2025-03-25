@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"gopher-market/internal/auth"
-	"gopher-market/internal/logger"
+	"gopher-market/internal/logging"
 	"gopher-market/internal/model"
 	"gopher-market/internal/orders"
 	"time"
@@ -29,7 +29,7 @@ func GetwithdrawnBalance(db *sql.DB, username string) (float32, error) {
 }
 
 func CreateTransactionWithdraw(db *sql.DB, user *model.User, orderNumber string, amount float32) error {
-	logger.Logg.Info("Process withdraw")
+	logging.Logg.Info("Process withdraw")
 	tx, err := db.Begin()
 	if err != nil {
 		return err
@@ -37,38 +37,38 @@ func CreateTransactionWithdraw(db *sql.DB, user *model.User, orderNumber string,
 	defer func() {
 		if err != nil {
 			tx.Rollback()
-			logger.Logg.Error("Failed to commit transaction", "error", err)
+			logging.Logg.Error("Failed to commit transaction", "error", err)
 		}
 	}()
 
 	if amount > user.Balance {
 		return ErrInsufficientFunds
 	}
-	logger.Logg.Info("Amount checked")
+	logging.Logg.Info("Amount checked")
 
 	_, err = tx.Exec("INSERT INTO transactions (user_id, order_number, amount, transactions_type, updated_at) VALUES ($1, $2, $3, $4, $5)",
 		user.ID, orderNumber, amount, model.Withdraw, time.Now())
 	if err != nil {
-		logger.Logg.Error("Failed to commit transaction", "error", err)
+		logging.Logg.Error("Failed to commit transaction", "error", err)
 		return err
 	}
-	logger.Logg.Info("Transaction created")
+	logging.Logg.Info("Transaction created")
 
 	newBalance := user.Balance - amount
 
 	_, err = tx.Exec("UPDATE users SET current_balance = $1 WHERE user_id = $2", newBalance, user.ID)
 	if err != nil {
-		logger.Logg.Error("Failed to commit transaction", "error", err)
+		logging.Logg.Error("Failed to commit transaction", "error", err)
 		return err
 	}
-	logger.Logg.Info("User updated")
+	logging.Logg.Info("User updated")
 
 	err = tx.Commit()
 	if err != nil {
-		logger.Logg.Error("Failed to commit transaction", "error", err)
+		logging.Logg.Error("Failed to commit transaction", "error", err)
 		return err
 	}
-	logger.Logg.Info("Database commited")
+	logging.Logg.Info("Database commited")
 
 	return nil
 }
@@ -95,11 +95,11 @@ func Getwithdrawals(db *sql.DB, userID int) ([]model.Transactions, error) {
 		}
 		withdrawals = append(withdrawals, withdrawal)
 	}
-	logger.Logg.Info("Got rows", "rows", withdrawals)
+	logging.Logg.Info("Got rows", "rows", withdrawals)
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	logger.Logg.Info("Ok")
+	logging.Logg.Info("Ok")
 	return withdrawals, nil
 }
 
@@ -111,13 +111,13 @@ func Update(db *sql.DB, orderNumber string, status string, accrual float32) erro
 	defer func() {
 		if err != nil {
 			tx.Rollback()
-			logger.Logg.Error("Failed to commit transaction", "error", ErrFailCommTrans)
+			logging.Logg.Error("Failed to commit transaction", "error", ErrFailCommTrans)
 		}
 	}()
 
 	user, err := orders.GetUserByOrderNumber(db, orderNumber)
 	if err != nil {
-		logger.Logg.Error("Failed to commit transaction GetUserByOrderNumber", "error", ErrFailCommTrans)
+		logging.Logg.Error("Failed to commit transaction GetUserByOrderNumber", "error", ErrFailCommTrans)
 		return err
 	}
 
@@ -125,7 +125,7 @@ func Update(db *sql.DB, orderNumber string, status string, accrual float32) erro
 		_, err = tx.Exec("INSERT INTO transactions (user_id, order_number, amount, transactions_type, updated_at) VALUES ($1, $2, $3, $4, $5)",
 			user.ID, orderNumber, accrual, model.Accrual, time.Now())
 		if err != nil {
-			logger.Logg.Error("Failed to commit transaction transactions", "error", ErrFailCommTrans)
+			logging.Logg.Error("Failed to commit transaction transactions", "error", ErrFailCommTrans)
 			return err
 		}
 	}
@@ -133,18 +133,18 @@ func Update(db *sql.DB, orderNumber string, status string, accrual float32) erro
 	newBalance := user.Balance + accrual
 	_, err = tx.Exec("UPDATE users SET current_balance = $1 WHERE user_id = $2", newBalance, user.ID)
 	if err != nil {
-		logger.Logg.Error("Failed to commit transaction users", "error", ErrFailCommTrans)
+		logging.Logg.Error("Failed to commit transaction users", "error", ErrFailCommTrans)
 		return err
 	}
 	_, err = tx.Exec("UPDATE orders SET accrual = $1, status = $2 WHERE order_number = $3", accrual, status, orderNumber)
 	if err != nil {
-		logger.Logg.Error("Failed to commit transaction orders", "error", ErrFailCommTrans)
+		logging.Logg.Error("Failed to commit transaction orders", "error", ErrFailCommTrans)
 		return err
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		logger.Logg.Error("Failed to commit transaction", "error", ErrFailCommTrans)
+		logging.Logg.Error("Failed to commit transaction", "error", ErrFailCommTrans)
 		return err
 	}
 
