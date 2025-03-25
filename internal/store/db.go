@@ -3,7 +3,8 @@ package store
 import (
 	"database/sql"
 	"errors"
-	"gopher-market/internal/logger"
+	"fmt"
+	"gopher-market/internal/logging"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -16,17 +17,21 @@ type Database struct {
 func (ms *Database) NewStorage(DBDSN string) error {
 	var err error
 	ms.DBDSN = DBDSN
-	logger.Logg.Info(DBDSN)
+	if logging.Logg == nil {
+		return fmt.Errorf("logger is not initialized")
+	}
+
+	logging.Logg.Info(DBDSN)
 	if ms.DB, err = sql.Open("pgx", ms.DBDSN); err != nil {
-		logger.Logg.Error("Couldn't connect to the database with an error", "error", err)
+		logging.Logg.Error("Couldn't connect to the database with an error", "error", err)
 		return err
 	}
 
 	err = ms.initDBTables()
 	if err != nil {
-		logger.Logg.Error("Failed to initialize DB", "error", err)
+		logging.Logg.Error("Failed to initialize DB", "error", err)
 	}
-	logger.Logg.Info("Database connection was created")
+	logging.Logg.Info("Database connection was created")
 	return nil
 }
 

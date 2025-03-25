@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"gopher-market/internal/logger"
+	"gopher-market/internal/logging"
 	"io"
 	"net/http"
 	"strconv"
@@ -170,7 +170,7 @@ func (wp *WorkerPool) processTask(task Task) error {
 			time.Sleep((1 << i) * time.Second)
 		}
 	}
-	logger.Logg.Warn("All retry attempts failed", "error", lastErr)
+	logging.Logg.Warn("All retry attempts failed", "error", lastErr)
 	return fmt.Errorf("failed after retries: %w", lastErr)
 }
 

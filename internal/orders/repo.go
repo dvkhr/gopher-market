@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"gopher-market/internal/auth"
-	"gopher-market/internal/logger"
+	"gopher-market/internal/logging"
 	"gopher-market/internal/model"
 )
 
@@ -32,7 +32,7 @@ func CreateOrder(db *sql.DB, userID int, orderNumber string) (int, error) {
 
 	err := db.QueryRow(createOrder, userID, orderNumber, model.StatusNew).Scan(&id)
 	if err != nil {
-		logger.Logg.Error("err", "err", err)
+		logging.Logg.Error("err", "err", err)
 		if err == sql.ErrNoRows {
 			return 0, ErrDuplicate
 		}

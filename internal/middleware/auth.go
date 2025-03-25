@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"gopher-market/internal/auth"
+	"gopher-market/internal/logging"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/golang-jwt/jwt"
 )
@@ -45,4 +47,55 @@ func Auth(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+// responseWriterWrapper — это обертка для ResponseWriter, которая записывает HTTP-статус
+type responseWriterWrapper struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+// WriteHeader перехватывает вызов WriteHeader для записи статуса
+func (rw *responseWriterWrapper) WriteHeader(statusCode int) {
+	rw.statusCode = statusCode
+	rw.ResponseWriter.WriteHeader(statusCode)
+}
+
+// LoggingMiddleware добавляет логирование HTTP-запросов
+func LoggingMiddleware(logger *logging.Logger) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			start := time.Now()
+
+			// Извлечение username из контекста
+			username, ok := r.Context().Value(UserContextKey).(string)
+			if !ok {
+				username = "unknown" // Если username отсутствует, используем "unknown"
+			}
+
+			// Логируем начало запроса
+			logger.Info("incoming request",
+				"username", username,
+				"method", r.Method,
+				"url", r.URL.String(),
+				"remote_addr", r.RemoteAddr,
+			)
+
+			// Обертка для ResponseWriter
+			rww := &responseWriterWrapper{ResponseWriter: w}
+
+			// Вызываем следующий обработчик
+			next.ServeHTTP(rww, r)
+
+			// Логируем завершение запроса
+			duration := time.Since(start)
+			logger.Info("request completed",
+				"username", username,
+				"method", r.Method,
+				"url", r.URL.String(),
+				"status_code", rww.statusCode,
+				"duration", duration.String(),
+			)
+		})
+	}
 }
