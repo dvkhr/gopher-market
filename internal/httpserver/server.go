@@ -64,7 +64,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	logging.Logg.Info("Shutting down server gracefully")
 
 	// Отменяем контекст после таймаута
-	shutdownCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	// Вызываем Shutdown
