@@ -62,5 +62,17 @@ func (s *Server) Start() {
 
 func (s *Server) Shutdown(ctx context.Context) error {
 	logging.Logg.Info("Shutting down server gracefully")
-	return s.Serv.Shutdown(ctx)
+
+	// Отменяем контекст после таймаута
+	shutdownCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	// Вызываем Shutdown
+	if err := s.Serv.Shutdown(shutdownCtx); err != nil {
+		logging.Logg.Error("Server shutdown error", "error", err)
+		return err
+	}
+
+	logging.Logg.Info("Server stopped")
+	return nil
 }

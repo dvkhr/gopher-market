@@ -67,6 +67,14 @@ func (rw *responseWriterWrapper) WriteHeader(statusCode int) {
 func LoggingMiddleware(logger *logging.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := r.Context()
+			select {
+			case <-ctx.Done():
+				http.Error(w, "Request canceled", http.StatusServiceUnavailable)
+				return
+			default:
+			}
+
 			start := time.Now()
 
 			// Извлечение username из контекста
