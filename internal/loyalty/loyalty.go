@@ -8,6 +8,7 @@ import (
 	"gopher-market/internal/logging"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -61,11 +62,25 @@ func (wp *WorkerPool) Stop() {
 		return
 	}
 
+	logging.Logg.Info("Stopping worker pool")
 	close(wp.tasks)
 	wp.cancel()
 	wp.closed = true
-	wp.wg.Wait()
 
+	// Добавляем таймаут для wg.Wait
+	done := make(chan struct{})
+	go func() {
+		wp.wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		logging.Logg.Info("Worker pool stopped")
+	case <-time.After(30 * time.Second):
+		logging.Logg.Warn("Worker pool did not stop in time, forcing exit")
+		os.Exit(1)
+	}
 }
 
 func (wp *WorkerPool) AddTask(task Task) {
@@ -73,6 +88,7 @@ func (wp *WorkerPool) AddTask(task Task) {
 	defer wp.mu.Unlock()
 
 	if wp.closed {
+		logging.Logg.Warn("Task not added: worker pool is closed")
 		return
 	}
 
@@ -81,42 +97,60 @@ func (wp *WorkerPool) AddTask(task Task) {
 	case wp.tasks <- task:
 	case <-wp.ctx.Done():
 		wp.wg.Done()
+		logging.Logg.Warn("Task not added: context canceled")
 	}
 }
 
 func (wp *WorkerPool) worker() {
-	for task := range wp.tasks {
-		if err := wp.processTask(task); err != nil {
-			task.ErrorChan <- err
+	for {
+		select {
+		case task, ok := <-wp.tasks:
+			if !ok {
+				return
+			}
+			wp.wg.Add(1)
+			go func(t Task) {
+				defer wp.wg.Done()
+				if err := wp.processTask(t); err != nil {
+					t.ErrorChan <- err
+				}
+			}(task)
+
+		case <-wp.ctx.Done():
+			return
 		}
-		wp.wg.Done()
 	}
 }
 
 func (wp *WorkerPool) processTask(task Task) error {
 	url := fmt.Sprintf("%s/api/orders/%s", task.BaseURL, task.OrderNumber)
+	logging.Logg.Info("Processing task", "url", url)
 
 	var lastErr error
 	for i := 0; i < 3; i++ {
 		select {
 		case <-wp.ctx.Done():
+			logging.Logg.Warn("Task canceled by context")
 			return wp.ctx.Err()
 		default:
 		}
 
-		ctxWithTimeout, cancel := context.WithTimeout(wp.ctx, 30*time.Second)
+		ctxWithTimeout, cancel := context.WithTimeout(wp.ctx, 5*time.Second)
 		defer cancel()
 
 		req, err := http.NewRequestWithContext(ctxWithTimeout, http.MethodGet, url, nil)
 		if err != nil {
 			lastErr = fmt.Errorf("failed to create request: %w", err)
+			logging.Logg.Error("Failed to create request", "error", err)
 			time.Sleep((1 << i) * time.Second)
 			continue
 		}
 
-		resp, err := http.DefaultClient.Do(req)
+		client := &http.Client{Timeout: 10 * time.Second}
+		resp, err := client.Do(req)
 		if err != nil {
 			lastErr = fmt.Errorf("failed to send request: %w", err)
+			logging.Logg.Error("Failed to send request", "error", err)
 			time.Sleep((1 << i) * time.Second)
 			continue
 		}
@@ -127,27 +161,33 @@ func (wp *WorkerPool) processTask(task Task) error {
 			var accrualResponse Accrual
 			err := json.NewDecoder(resp.Body).Decode(&accrualResponse)
 			if err != nil {
+				logging.Logg.Error("Failed to decode response", "error", err)
 				return fmt.Errorf("failed to decode response: %w", err)
 			}
 			select {
 			case <-wp.ctx.Done():
+				logging.Logg.Warn("Task canceled while sending result")
 				return wp.ctx.Err()
 			default:
 				if task.ResultChan != nil {
 					select {
 					case <-wp.ctx.Done():
+						logging.Logg.Warn("Task canceled while sending result")
 						return wp.ctx.Err()
 					case task.ResultChan <- &accrualResponse:
+						logging.Logg.Info("Task result sent successfully")
 					}
 				}
 			}
 			return nil
 
 		case http.StatusNoContent:
+			logging.Logg.Info("Order not registered in loyalty system")
 			return ErrOrderNotRegistered
 
 		case http.StatusTooManyRequests:
 			retryAfter := parseRetryAfter(resp.Header.Get("Retry-After"))
+			logging.Logg.Warn("Too many requests, retrying after", "duration", retryAfter)
 			if retryAfter > 0 {
 				time.Sleep(retryAfter)
 			} else {
@@ -155,27 +195,22 @@ func (wp *WorkerPool) processTask(task Task) error {
 			}
 			lastErr = fmt.Errorf("too many requests, retrying after %v", retryAfter)
 
-		case http.StatusInternalServerError:
-			lastErr = errors.New("internal server error")
-			time.Sleep((1 << i) * time.Second)
-
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				lastErr = fmt.Errorf("failed to read response body: %w", err)
+				logging.Logg.Error("Failed to read response body", "error", err)
 				time.Sleep((1 << i) * time.Second)
 				continue
 			}
 			lastErr = fmt.Errorf("unexpected status code: %d, body: %s", resp.StatusCode, string(body))
+			logging.Logg.Error("Unexpected status code", "status", resp.StatusCode, "body", string(body))
 			time.Sleep((1 << i) * time.Second)
 		}
 	}
+
 	logging.Logg.Warn("All retry attempts failed", "error", lastErr)
 	return fmt.Errorf("failed after retries: %w", lastErr)
-}
-
-func (wp *WorkerPool) Wait() {
-	wp.wg.Wait()
 }
 
 func parseRetryAfter(retryAfter string) time.Duration {
@@ -192,4 +227,8 @@ func parseRetryAfter(retryAfter string) time.Duration {
 	}
 
 	return 1 * time.Second
+}
+
+func (wp *WorkerPool) Wait() {
+	wp.wg.Wait()
 }

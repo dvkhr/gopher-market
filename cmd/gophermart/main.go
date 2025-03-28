@@ -66,11 +66,18 @@ func main() {
 			logging.Logg.Info("Context canceled, stopping processing")
 			return
 		case <-stop:
+
 			logging.Logg.Info("Shutting down server gracefully")
+
 			pool.Stop()
 			pool.Wait()
-			if err := srv.Shutdown(ctx); err != nil {
+
+			shutdownCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			defer cancel()
+
+			if err := srv.Shutdown(shutdownCtx); err != nil {
 				logging.Logg.Error("Server shutdown error", "error", err)
+				logging.Logg.Warn("Forcefully exiting program")
 				os.Exit(1)
 			}
 			logging.Logg.Info("Server stopped")
