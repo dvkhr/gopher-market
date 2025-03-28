@@ -104,7 +104,7 @@ func (wp *WorkerPool) processTask(task Task) error {
 		default:
 		}
 
-		ctxWithTimeout, cancel := context.WithTimeout(wp.ctx, 5*time.Second)
+		ctxWithTimeout, cancel := context.WithTimeout(wp.ctx, 30*time.Second)
 		defer cancel()
 
 		req, err := http.NewRequestWithContext(ctxWithTimeout, http.MethodGet, url, nil)
