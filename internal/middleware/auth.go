@@ -1,10 +1,12 @@
 package middleware
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"gopher-market/internal/auth"
 	"gopher-market/internal/logging"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -61,7 +63,7 @@ func (rw *responseWriterWrapper) WriteHeader(statusCode int) {
 	rw.ResponseWriter.WriteHeader(statusCode)
 }
 
-// LoggingMiddleware добавляет логирование HTTP-запросов
+// LoggingMiddleware логирование HTTP-запросов
 func LoggingMiddleware(logger *logging.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -73,21 +75,28 @@ func LoggingMiddleware(logger *logging.Logger) func(http.Handler) http.Handler {
 				username = "unknown" // Если username отсутствует, используем "unknown"
 			}
 
-			// Логируем начало запроса
+			// Чтение тела запроса
+			var bodyBytes []byte
+			if r.Body != nil {
+				bodyBytes, _ = io.ReadAll(r.Body)
+				// Восстанавливаем тело запроса, чтобы оно могло быть использовано дальше
+				r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+			}
+
+			maskedBody := logging.MaskSensitiveData(string(bodyBytes))
+
 			logger.Info("incoming request",
 				"username", username,
 				"method", r.Method,
 				"url", r.URL.String(),
 				"remote_addr", r.RemoteAddr,
+				"body", maskedBody, // Логируем тело запроса
 			)
 
-			// Обертка для ResponseWriter
 			rww := &responseWriterWrapper{ResponseWriter: w}
 
-			// Вызываем следующий обработчик
 			next.ServeHTTP(rww, r)
 
-			// Логируем завершение запроса
 			duration := time.Since(start)
 			logger.Info("request completed",
 				"username", username,

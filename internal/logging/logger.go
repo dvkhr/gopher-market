@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"regexp"
 	"time"
 )
 
@@ -133,4 +134,10 @@ func (l *Logger) Error(msg string, attrs ...any) {
 // Debug логирует отладочное сообщение
 func (l *Logger) Debug(msg string, attrs ...any) {
 	l.logger.Debug(msg, attrs...)
+}
+
+// Маскировка чувствительных данных
+func MaskSensitiveData(body string) string {
+	re := regexp.MustCompile(`("(password|token)"\s*:\s*")([^"]*)`)
+	return re.ReplaceAllString(body, `$1***`)
 }
