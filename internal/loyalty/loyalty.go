@@ -146,7 +146,7 @@ func (wp *WorkerPool) processTask(task Task) error {
 			continue
 		}
 
-		client := &http.Client{Timeout: 10 * time.Second}
+		client := &http.Client{Timeout: 30 * time.Second}
 		resp, err := client.Do(req)
 		if err != nil {
 			lastErr = fmt.Errorf("failed to send request: %w", err)
