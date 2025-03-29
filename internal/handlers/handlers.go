@@ -145,11 +145,12 @@ func (s *Server) CheckOrder(orNum, username string) error {
 	return nil
 }
 func (s *Server) UploadOrder(w http.ResponseWriter, r *http.Request) {
-	username, ok := r.Context().Value(middleware.UserContextKey).(string)
-	if !ok {
-		http.Error(w, "User not found in context", http.StatusUnauthorized)
+	username, err := middleware.ExtractUserFromContext(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 		return
@@ -193,9 +194,9 @@ func (s *Server) UploadOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) GetOrders(w http.ResponseWriter, r *http.Request) {
-	username, ok := r.Context().Value(middleware.UserContextKey).(string)
-	if !ok {
-		http.Error(w, "User not found in context", http.StatusUnauthorized)
+	username, err := middleware.ExtractUserFromContext(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 	if r.Method != http.MethodGet {
@@ -222,9 +223,9 @@ func (s *Server) GetOrders(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) GetBalance(w http.ResponseWriter, r *http.Request) {
-	username, ok := r.Context().Value(middleware.UserContextKey).(string)
-	if !ok {
-		http.Error(w, "User not found in context", http.StatusUnauthorized)
+	username, err := middleware.ExtractUserFromContext(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
@@ -259,9 +260,9 @@ type Balance struct {
 }
 
 func (s *Server) WithdrawBalance(w http.ResponseWriter, r *http.Request) {
-	username, ok := r.Context().Value(middleware.UserContextKey).(string)
-	if !ok {
-		http.Error(w, "User not found in context", http.StatusUnauthorized)
+	username, err := middleware.ExtractUserFromContext(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
@@ -286,7 +287,7 @@ func (s *Server) WithdrawBalance(w http.ResponseWriter, r *http.Request) {
 		"sum", req.Sum,
 	)
 
-	err := s.CheckOrder(req.Order, username)
+	err = s.CheckOrder(req.Order, username)
 
 	logging.Logg.Info("CheckOrder",
 		"username", username,
@@ -317,12 +318,12 @@ func (s *Server) WithdrawBalance(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) GetWithdrawals(w http.ResponseWriter, r *http.Request) {
-	username, ok := r.Context().Value(middleware.UserContextKey).(string)
-	if !ok {
-		logging.Logg.Error("User not found in context")
-		http.Error(w, "User not found in context", http.StatusUnauthorized)
+	username, err := middleware.ExtractUserFromContext(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
+
 	if r.Method != http.MethodGet {
 		logging.Logg.Error("Invalid request method")
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
