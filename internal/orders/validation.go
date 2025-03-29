@@ -2,6 +2,8 @@ package orders
 
 import "regexp"
 
+var numericRegex = regexp.MustCompile(`^[0-9]+$`)
+
 func IsNumeric(word string) bool {
-	return regexp.MustCompile(`\d`).MatchString(word)
+	return numericRegex.MatchString(word)
 }
