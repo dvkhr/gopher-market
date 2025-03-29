@@ -84,7 +84,6 @@ func LoggingMiddleware(logger *logging.Logger) func(http.Handler) http.Handler {
 func AuthMiddleware(cfg *config.Config) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Получаем токен из заголовка Authorization
 			authHeader := r.Header.Get("Authorization")
 			if authHeader == "" {
 				logging.Logg.Warn("Missing Authorization header")
@@ -92,14 +91,14 @@ func AuthMiddleware(cfg *config.Config) func(next http.Handler) http.Handler {
 				return
 			}
 
-			// Проверяем токен
 			username, err := auth.ParseToken(authHeader, cfg)
 			if err != nil {
 				logging.Logg.Warn("Invalid token", "error", err)
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
-			} // Добавляем username в контекст запроса
-			ctx := context.WithValue(r.Context(), "username", username)
+			}
+
+			ctx := context.WithValue(r.Context(), UserContextKey, username)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
