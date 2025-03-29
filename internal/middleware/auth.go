@@ -8,6 +8,7 @@ import (
 	"gopher-market/internal/logging"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -91,7 +92,13 @@ func AuthMiddleware(cfg *config.Config) func(next http.Handler) http.Handler {
 				return
 			}
 
-			username, err := auth.ParseToken(authHeader, cfg)
+			tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+			if tokenString == authHeader {
+				http.Error(w, "Invalid authorization header format", http.StatusUnauthorized)
+				return
+			}
+
+			username, err := auth.ParseToken(tokenString, cfg)
 			if err != nil {
 				logging.Logg.Warn("Invalid token", "error", err)
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
