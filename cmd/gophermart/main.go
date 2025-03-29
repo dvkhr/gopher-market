@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -12,7 +13,9 @@ import (
 	"gopher-market/internal/httpserver"
 	"gopher-market/internal/logging"
 	"gopher-market/internal/loyalty"
+	"gopher-market/internal/model"
 	"gopher-market/internal/orders"
+	"gopher-market/internal/transactions"
 )
 
 func main() {
@@ -53,6 +56,38 @@ func main() {
 	}
 
 	srv.Start()
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case result := <-resultChan:
+				logging.Logg.Info("Order processed",
+					"order", result.Order,
+					"status", result.Status,
+					"accrual", result.Accrual,
+				)
+
+				order, _ := orders.GetOrderByNumber(handler.Store.DB, result.Order)
+				if order.Status != model.StatusProcessed && order.Status != model.StatusInvalid {
+					if err := transactions.Update(handler.Store.DB, result.Order, result.Status, result.Accrual); err != nil {
+						logging.Logg.Error("Failed to update order status",
+							"order", result.Order,
+							"error", err,
+						)
+					}
+				}
+
+			case err := <-errorChan:
+				if errors.Is(err, loyalty.ErrOrderNotRegistered) {
+					logging.Logg.Info("Order is not registered in the accrual system")
+				} else {
+					logging.Logg.Error("Error fetching accrual info", "error", err)
+				}
+			}
+		}
+	}()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
