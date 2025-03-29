@@ -3,53 +3,17 @@ package middleware
 import (
 	"bytes"
 	"context"
-	"errors"
 	"gopher-market/internal/auth"
+	"gopher-market/internal/config"
 	"gopher-market/internal/logging"
 	"io"
 	"net/http"
-	"strings"
 	"time"
-
-	"github.com/golang-jwt/jwt"
 )
 
 type contextKey string
 
 const UserContextKey contextKey = "username"
-
-func Auth(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			http.Error(w, "Missing authorization header", http.StatusUnauthorized)
-			return
-		}
-
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		if tokenString == authHeader {
-			http.Error(w, "Invalid authorization header format", http.StatusUnauthorized)
-			return
-		}
-
-		username, err := auth.ParseToken(tokenString)
-		if err != nil {
-			var validationErr *jwt.ValidationError
-			if errors.As(err, &validationErr) && validationErr.Errors&jwt.ValidationErrorExpired != 0 {
-				http.Error(w, "Token expired", http.StatusUnauthorized)
-				return
-			}
-			http.Error(w, "Invalid token", http.StatusUnauthorized)
-			return
-		}
-
-		ctx := context.WithValue(r.Context(), UserContextKey, username)
-		r = r.WithContext(ctx)
-
-		next.ServeHTTP(w, r)
-	})
-}
 
 // responseWriterWrapper — это обертка для ResponseWriter, которая записывает HTTP-статус
 type responseWriterWrapper struct {
@@ -113,6 +77,30 @@ func LoggingMiddleware(logger *logging.Logger) func(http.Handler) http.Handler {
 				"status_code", rww.statusCode,
 				"duration", duration.String(),
 			)
+		})
+	}
+}
+
+func AuthMiddleware(cfg *config.Config) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Получаем токен из заголовка Authorization
+			authHeader := r.Header.Get("Authorization")
+			if authHeader == "" {
+				logging.Logg.Warn("Missing Authorization header")
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+
+			// Проверяем токен
+			username, err := auth.ParseToken(authHeader, cfg)
+			if err != nil {
+				logging.Logg.Warn("Invalid token", "error", err)
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			} // Добавляем username в контекст запроса
+			ctx := context.WithValue(r.Context(), "username", username)
+			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }

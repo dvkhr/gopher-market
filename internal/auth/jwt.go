@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"gopher-market/internal/config"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -12,9 +13,8 @@ type Claims struct {
 }
 
 const TokenExp = time.Hour * 24
-const SecretKey = "supersecretkey"
 
-func GenerateToken(Username string) (string, error) {
+func GenerateToken(Username string, cfg *config.Config) (string, error) {
 	claims := &Claims{
 		Username: Username,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -22,13 +22,13 @@ func GenerateToken(Username string) (string, error) {
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(SecretKey))
+	return token.SignedString([]byte(cfg.SecretKey))
 }
 
-func ParseToken(tokenString string) (string, error) {
+func ParseToken(tokenString string, cfg *config.Config) (string, error) {
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte(SecretKey), nil
+		return []byte(cfg.SecretKey), nil
 	})
 	if err != nil || !token.Valid {
 		return "", err

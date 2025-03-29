@@ -20,6 +20,7 @@ type Server struct {
 }
 
 func New(cfg config.Config, handler *handlers.Server) (*Server, error) {
+	authMiddleware := middleware.AuthMiddleware(&cfg)
 	r := chi.NewRouter()
 	r.Route("/api/user", func(r chi.Router) {
 		r.Use(middleware.LoggingMiddleware(logging.Logg))
@@ -27,7 +28,7 @@ func New(cfg config.Config, handler *handlers.Server) (*Server, error) {
 		r.Post("/login", handler.LoginUser)
 
 		r.Group(func(r chi.Router) {
-			r.Use(middleware.Auth)
+			r.Use(authMiddleware)
 			r.Post("/orders", handler.UploadOrder)
 			r.Get("/orders", handler.GetOrders)
 

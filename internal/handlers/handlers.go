@@ -61,7 +61,7 @@ func (s *Server) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Login already exists", http.StatusConflict)
 		return
 	}
-	authToken, err := auth.GenerateToken(requestBody.Login)
+	authToken, err := auth.GenerateToken(requestBody.Login, &s.Config)
 	if err != nil {
 		http.Error(w, "Failed generation token", http.StatusInternalServerError)
 		return
@@ -97,7 +97,7 @@ func (s *Server) LoginUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid login or password", http.StatusUnauthorized)
 		return
 	}
-	authToken, err := auth.GenerateToken(requestBody.Login)
+	authToken, err := auth.GenerateToken(requestBody.Login, &s.Config)
 	if err != nil {
 		http.Error(w, "Failed generation token", http.StatusInternalServerError)
 		return

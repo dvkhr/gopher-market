@@ -3,13 +3,15 @@ package config
 import (
 	"errors"
 	"flag"
+	"gopher-market/internal/logging"
 	"os"
 )
 
 type Config struct {
-	Address string
-	DBDsn   string
-	Accrual string
+	Address   string
+	DBDsn     string
+	Accrual   string
+	SecretKey string
 }
 
 var (
@@ -48,6 +50,14 @@ func (cfg *Config) ParseFlags() error {
 
 	if envVarAccr := os.Getenv("ACCRUAL_SYSTEM_ADDRESS"); envVarAccr != "" {
 		cfg.Accrual = envVarAccr
+	}
+
+	if envSecretKey := os.Getenv("JWT_SECRET_KEY"); envSecretKey != "" {
+		cfg.SecretKey = envSecretKey
+	} else {
+		cfg.SecretKey = "default-secret-key-for-development-only"
+		logging.Logg.Warn("JWT_SECRET_KEY is not set. Using default key for development only!")
+
 	}
 	return cfg.check()
 }
