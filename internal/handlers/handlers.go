@@ -40,8 +40,7 @@ type requestBody struct {
 }
 
 func (s *Server) RegisterUser(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+	if !CheckRequestMethod(w, r, http.MethodPost) {
 		return
 	}
 	var requestBody requestBody
@@ -76,8 +75,7 @@ func (s *Server) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	})
 }
 func (s *Server) LoginUser(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+	if !CheckRequestMethod(w, r, http.MethodPost) {
 		return
 	}
 	var requestBody requestBody
@@ -122,6 +120,7 @@ func readRequestBody(r *http.Request) (string, error) {
 }
 
 func (s *Server) CheckOrder(orNum, username string) error {
+
 	orderNumber := strings.TrimSpace(orNum)
 	if orderNumber == "" || !orders.IsNumeric(orderNumber) {
 		return errors.New("invalid order number format (StatusBadRequest)")
@@ -151,8 +150,7 @@ func (s *Server) UploadOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Method != http.MethodPost {
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+	if !CheckRequestMethod(w, r, http.MethodPost) {
 		return
 	}
 
@@ -199,8 +197,7 @@ func (s *Server) GetOrders(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
-	if r.Method != http.MethodGet {
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+	if !CheckRequestMethod(w, r, http.MethodGet) {
 		return
 	}
 
@@ -229,8 +226,7 @@ func (s *Server) GetBalance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Method != http.MethodGet {
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+	if !CheckRequestMethod(w, r, http.MethodGet) {
 		return
 	}
 
@@ -272,8 +268,7 @@ func (s *Server) WithdrawBalance(w http.ResponseWriter, r *http.Request) {
 		"balance", user.Balance,
 	)
 
-	if r.Method != http.MethodPost {
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+	if !CheckRequestMethod(w, r, http.MethodPost) {
 		return
 	}
 
@@ -324,9 +319,7 @@ func (s *Server) GetWithdrawals(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Method != http.MethodGet {
-		logging.Logg.Error("Invalid request method")
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+	if !CheckRequestMethod(w, r, http.MethodGet) {
 		return
 	}
 
@@ -353,4 +346,14 @@ func (s *Server) GetWithdrawals(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(withdrawals)
 	w.WriteHeader(http.StatusOK)
+}
+
+func CheckRequestMethod(w http.ResponseWriter, r *http.Request, expectedMethod string) bool {
+	if r.Method != expectedMethod {
+		logging.Logg.Error("Invalid request method.")
+
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return false
+	}
+	return true
 }
