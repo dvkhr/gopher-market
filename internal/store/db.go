@@ -14,20 +14,20 @@ type Database struct {
 	DB    *sql.DB
 }
 
-func (ms *Database) NewStorage(DBDSN string) error {
+func (r *Database) NewStorage(DBDSN string) error {
 	var err error
-	ms.DBDSN = DBDSN
+	r.DBDSN = DBDSN
 	if logging.Logg == nil {
 		return fmt.Errorf("logger is not initialized")
 	}
 
 	logging.Logg.Info(DBDSN)
-	if ms.DB, err = sql.Open("pgx", ms.DBDSN); err != nil {
+	if r.DB, err = sql.Open("pgx", r.DBDSN); err != nil {
 		logging.Logg.Error("Couldn't connect to the database with an error", "error", err)
 		return err
 	}
 
-	err = ms.initDBTables()
+	err = r.initDBTables()
 	if err != nil {
 		logging.Logg.Error("Failed to initialize DB", "error", err)
 	}
@@ -35,7 +35,7 @@ func (ms *Database) NewStorage(DBDSN string) error {
 	return nil
 }
 
-func (ms *Database) initDBTables() error {
+func (r *Database) initDBTables() error {
 	var errs []error
 	stmts := []string{
 		`create table if not exists users ( 
@@ -65,7 +65,7 @@ func (ms *Database) initDBTables() error {
 	}
 
 	for _, s := range stmts {
-		_, err := ms.DB.Exec(s)
+		_, err := r.DB.Exec(s)
 		if err != nil {
 			errs = append(errs, err)
 		}
