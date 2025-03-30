@@ -32,8 +32,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	logging.Logg.Info("cfg", "cfg", cfg.DBDsn)
-	handler, err := handlers.NewServer(cfg)
+	logging.Logg.Info("cfg", "cfg", cfg.DBDSN)
+	handler, err := handlers.NewHandler(&cfg)
 	if err != nil {
 		logging.Logg.Error("Server creation error", "error", err)
 		os.Exit(1)
@@ -69,9 +69,9 @@ func main() {
 					"accrual", result.Accrual,
 				)
 
-				order, _ := orders.GetOrderByNumber(handler.Store.DB, result.Order)
+				order, _ := orders.GetOrderByNumber(handler.AuthService.UserRepo.DB, result.Order)
 				if order.Status != model.StatusProcessed && order.Status != model.StatusInvalid {
-					if err := transactions.Update(handler.Store.DB, result.Order, result.Status, result.Accrual); err != nil {
+					if err := transactions.Update(handler.AuthService.UserRepo.DB, result.Order, result.Status, result.Accrual); err != nil {
 						logging.Logg.Error("Failed to update order status",
 							"order", result.Order,
 							"error", err,
@@ -119,7 +119,7 @@ func main() {
 			return
 
 		case <-ticker.C:
-			orderNumbers, err := orders.GetUnfinishedOrders(handler.Store.DB)
+			orderNumbers, err := orders.GetUnfinishedOrders(handler.AuthService.UserRepo.DB)
 			if err != nil {
 				logging.Logg.Error("Failed to fetch unfinished orders", "error", err)
 				continue
