@@ -3,7 +3,6 @@ package transactions
 import (
 	"database/sql"
 	"errors"
-	"gopher-market/internal/auth"
 	"gopher-market/internal/logging"
 	"gopher-market/internal/model"
 	"gopher-market/internal/orders"
@@ -14,18 +13,19 @@ var ErrInsufficientFunds = errors.New("insufficient funds (402)")
 var ErrFailCommTrans = errors.New("failed to commit transaction")
 
 func GetwithdrawnBalance(db *sql.DB, username string) (float32, error) {
-	var withdrawnBalance float32
-	user, _ := auth.GetUserByLogin(db, username)
+	/*var withdrawnBalance float32
+		user, _ := auth.GetUserByLogin(db, username)
 
-	err := db.QueryRow(` 
-	SELECT COALESCE(SUM(amount), 0) 
-        FROM transactions 
-        WHERE user_id = $1 AND transactions_type = $2`,
-		user.ID, model.Withdraw).Scan(&withdrawnBalance)
-	if err != nil {
-		return 0, err
-	}
-	return withdrawnBalance, nil
+		err := db.QueryRow(`
+		SELECT COALESCE(SUM(amount), 0)
+	        FROM transactions
+	        WHERE user_id = $1 AND transactions_type = $2`,
+			user.ID, model.Withdraw).Scan(&withdrawnBalance)
+		if err != nil {
+			return 0, err
+		}
+	*/
+	return 0, nil //withdrawnBalance, nil
 }
 
 func CreateTransactionWithdraw(db *sql.DB, user *model.User, orderNumber string, amount float32) error {

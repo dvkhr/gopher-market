@@ -7,31 +7,28 @@ import (
 	"gopher-market/internal/auth"
 	"gopher-market/internal/config"
 	"gopher-market/internal/logging"
-	"gopher-market/internal/middleware"
 	"gopher-market/internal/orders"
+	"gopher-market/internal/service"
 	"gopher-market/internal/store"
-	"gopher-market/internal/transactions"
-	"io"
 	"net/http"
 	"strings"
-	"sync"
 
 	luhn "github.com/EClaesson/go-luhn"
 )
 
-type Server struct {
-	Store  store.Database
-	Config config.Config
-	Mux    sync.Mutex
+type Handler struct {
+	AuthService *service.Auth
+	Config      *config.Config
 }
 
-func NewServer(config config.Config) (*Server, error) {
+func NewHandler(cfg *config.Config) (*Handler, error) {
 	var s store.Database
-	err := s.NewStorage(config.DBDsn)
+	err := s.NewStorage(cfg.DBDSN)
 	if err != nil {
 		return nil, err
 	}
-	return &Server{Store: s, Config: config}, nil
+	authService := service.NewAuthService(s)
+	return &Handler{AuthService: authService, Config: cfg}, nil
 }
 
 type requestBody struct {
@@ -39,7 +36,7 @@ type requestBody struct {
 	Password string `json:"password"`
 }
 
-func (s *Server) RegisterUser(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	if !CheckRequestMethod(w, r, http.MethodPost) {
 		return
 	}
@@ -49,18 +46,19 @@ func (s *Server) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad request format", http.StatusBadRequest)
 		return
 	}
-	passwordHash, err := auth.HashPassword(requestBody.Password)
+
+	passwordHash, err := h.AuthService.HashPassword(requestBody.Password)
 	if err != nil {
 		http.Error(w, "Failed hash the password", http.StatusInternalServerError)
 		return
 	}
 
-	_, err = auth.CreateUser(s.Store.DB, requestBody.Login, passwordHash)
+	_, err = h.AuthService.Register(r.Context(), requestBody.Login, passwordHash)
 	if err != nil {
 		http.Error(w, "Login already exists", http.StatusConflict)
 		return
 	}
-	authToken, err := auth.GenerateToken(requestBody.Login, &s.Config)
+	authToken, err := auth.GenerateToken(requestBody.Login, h.Config)
 	if err != nil {
 		http.Error(w, "Failed generation token", http.StatusInternalServerError)
 		return
@@ -74,7 +72,7 @@ func (s *Server) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		"token":   authToken,
 	})
 }
-func (s *Server) LoginUser(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) LoginUser(w http.ResponseWriter, r *http.Request) {
 	if !CheckRequestMethod(w, r, http.MethodPost) {
 		return
 	}
@@ -85,17 +83,19 @@ func (s *Server) LoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := auth.GetUserByLogin(s.Store.DB, requestBody.Login)
+	isValid, err := h.AuthService.Login(r.Context(), requestBody.Login, requestBody.Password)
 	if err != nil {
-		http.Error(w, "The user does not exist", http.StatusUnauthorized)
+		logging.Logg.Error("Login failed", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	if err := auth.CheckPass(user.PasswordHash, requestBody.Password); err != nil {
+	if !isValid {
 		http.Error(w, "Invalid login or password", http.StatusUnauthorized)
 		return
 	}
-	authToken, err := auth.GenerateToken(requestBody.Login, &s.Config)
+
+	authToken, err := auth.GenerateToken(requestBody.Login, h.Config)
 	if err != nil {
 		http.Error(w, "Failed generation token", http.StatusInternalServerError)
 		return
@@ -109,7 +109,8 @@ func (s *Server) LoginUser(w http.ResponseWriter, r *http.Request) {
 		"token":   authToken,
 	})
 }
-func readRequestBody(r *http.Request) (string, error) {
+
+/*func readRequestBody(r *http.Request) (string, error) {
 	bodyBytes, err := io.ReadAll(r.Body)
 	if err != nil {
 		return "", err
@@ -117,9 +118,9 @@ func readRequestBody(r *http.Request) (string, error) {
 	defer r.Body.Close()
 
 	return string(bodyBytes), nil
-}
+}*/
 
-func (s *Server) CheckOrder(orNum, username string) error {
+func (h *Handler) CheckOrder(orNum, username string) error {
 
 	orderNumber := strings.TrimSpace(orNum)
 	if orderNumber == "" || !orders.IsNumeric(orderNumber) {
@@ -131,10 +132,10 @@ func (s *Server) CheckOrder(orNum, username string) error {
 		return errors.New("invalid order number (StatusUnprocessableEntity)")
 	}
 
-	order, err := orders.GetOrderByNumber(s.Store.DB, orderNumber)
+	order, err := orders.GetOrderByNumber(h.AuthService.UserRepo.DB, orderNumber)
 
 	if err == nil {
-		user, _ := auth.GetUserByID(s.Store.DB, order.UserID)
+		user, _ := h.AuthService.UserRepo.GetUserByID(order.UserID)
 		if user.Username == username {
 			return errors.New("the order was uploaded by the user (StatusOK)")
 		} else {
@@ -143,8 +144,8 @@ func (s *Server) CheckOrder(orNum, username string) error {
 	}
 	return nil
 }
-func (s *Server) UploadOrder(w http.ResponseWriter, r *http.Request) {
-	username, err := middleware.ExtractUserFromContext(r)
+func (h *Handler) UploadOrder(w http.ResponseWriter, r *http.Request) {
+	/*username, err := middleware.ExtractUserFromContext(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -183,7 +184,7 @@ func (s *Server) UploadOrder(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed registered new order", http.StatusInternalServerError)
 		return
 	}
-
+	*/
 	w.WriteHeader(http.StatusAccepted)
 	json.NewEncoder(w).Encode(map[string]string{
 		"status":  "accepted",
@@ -191,8 +192,8 @@ func (s *Server) UploadOrder(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *Server) GetOrders(w http.ResponseWriter, r *http.Request) {
-	username, err := middleware.ExtractUserFromContext(r)
+func (h *Handler) GetOrders(w http.ResponseWriter, r *http.Request) {
+	/*username, err := middleware.ExtractUserFromContext(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -214,13 +215,13 @@ func (s *Server) GetOrders(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-
+	*/
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(orders)
+	//json.NewEncoder(w).Encode(orders)
 }
 
-func (s *Server) GetBalance(w http.ResponseWriter, r *http.Request) {
-	username, err := middleware.ExtractUserFromContext(r)
+func (h *Handler) GetBalance(w http.ResponseWriter, r *http.Request) {
+	/*username, err := middleware.ExtractUserFromContext(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -241,13 +242,15 @@ func (s *Server) GetBalance(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failded get the withdrawn amount", http.StatusInternalServerError)
 		return
 	}
-
+	*/
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]float32{
-		"current":   user.Balance,
-		"withdrawn": withdrawnBalance,
-	})
+	/*
+		json.NewEncoder(w).Encode(map[string]float32{
+			"current":   user.Balance,
+			"withdrawn": withdrawnBalance,
+		})
+	*/
 }
 
 type Balance struct {
@@ -255,8 +258,8 @@ type Balance struct {
 	Sum   float32 `json:"sum"`   // Сумма баллов
 }
 
-func (s *Server) WithdrawBalance(w http.ResponseWriter, r *http.Request) {
-	username, err := middleware.ExtractUserFromContext(r)
+func (h *Handler) WithdrawBalance(w http.ResponseWriter, r *http.Request) {
+	/*username, err := middleware.ExtractUserFromContext(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -308,43 +311,43 @@ func (s *Server) WithdrawBalance(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logging.Logg.Error("Failed to create order", "orderNumber", req.Order, "error", err)
 	}
-
+	*/
 	w.WriteHeader(http.StatusOK)
 }
 
-func (s *Server) GetWithdrawals(w http.ResponseWriter, r *http.Request) {
-	username, err := middleware.ExtractUserFromContext(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
+func (h *Handler) GetWithdrawals(w http.ResponseWriter, r *http.Request) {
+	/*	username, err := middleware.ExtractUserFromContext(r)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
 
-	if !CheckRequestMethod(w, r, http.MethodGet) {
-		return
-	}
+		if !CheckRequestMethod(w, r, http.MethodGet) {
+			return
+		}
 
-	user, _ := auth.GetUserByLogin(s.Store.DB, username)
+		user, _ := auth.GetUserByLogin(s.Store.DB, username)
 
-	logging.Logg.Info("GetUserByLogin",
-		"username", user.Username,
-		"id", user.ID,
-	)
+		logging.Logg.Info("GetUserByLogin",
+			"username", user.Username,
+			"id", user.ID,
+		)
 
-	withdrawals, err := transactions.Getwithdrawals(s.Store.DB, user.ID)
-	if err != nil {
-		logging.Logg.Error("Getwithdrawals", "err", err)
+		withdrawals, err := transactions.Getwithdrawals(s.Store.DB, user.ID)
+		if err != nil {
+			logging.Logg.Error("Getwithdrawals", "err", err)
 
-		http.Error(w, "Failed fetching orders from DB:", http.StatusInternalServerError)
-		return
-	}
+			http.Error(w, "Failed fetching orders from DB:", http.StatusInternalServerError)
+			return
+		}
 
-	if len(withdrawals) == 0 {
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
+		if len(withdrawals) == 0 {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(withdrawals)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(withdrawals)*/
 	w.WriteHeader(http.StatusOK)
 }
 

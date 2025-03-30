@@ -19,7 +19,7 @@ type Server struct {
 	Serv *http.Server
 }
 
-func New(cfg config.Config, handler *handlers.Server) (*Server, error) {
+func New(cfg config.Config, handler *handlers.Handler) (*Server, error) {
 	authMiddleware := middleware.AuthMiddleware(&cfg)
 	r := chi.NewRouter()
 	r.Route("/api/user", func(r chi.Router) {

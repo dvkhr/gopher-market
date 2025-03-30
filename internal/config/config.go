@@ -9,7 +9,7 @@ import (
 
 type Config struct {
 	Address   string
-	DBDsn     string
+	DBDSN     string
 	Accrual   string
 	SecretKey string
 }
@@ -25,7 +25,7 @@ func (cfg *Config) check() error {
 
 	if len(cfg.Address) == 0 {
 		errs = append(errs, ErrAddressEmpty)
-	} else if len(cfg.DBDsn) == 0 {
+	} else if len(cfg.DBDSN) == 0 {
 		errs = append(errs, ErrDBDsnEmpty)
 	} else if len(cfg.Accrual) == 0 {
 		errs = append(errs, ErrAccrualEmpty)
@@ -35,7 +35,7 @@ func (cfg *Config) check() error {
 
 func (cfg *Config) ParseFlags() error {
 	flag.StringVar(&cfg.Address, "a", "localhost:8080", "Service address and port")
-	flag.StringVar(&cfg.DBDsn, "d", "postgres://admin:12345@localhost:5432/loyalty_bonus_system?sslmode=disable", "The database connection")
+	flag.StringVar(&cfg.DBDSN, "d", "postgres://admin:12345@localhost:5432/loyalty_bonus_system?sslmode=disable", "The database connection")
 	flag.StringVar(&cfg.Accrual, "r", "http://localhost:8080", " Address of the accrual system")
 
 	flag.Parse()
@@ -45,7 +45,7 @@ func (cfg *Config) ParseFlags() error {
 	}
 
 	if envVarDB := os.Getenv("DATABASE_URI"); envVarDB != "" {
-		cfg.DBDsn = envVarDB
+		cfg.DBDSN = envVarDB
 	}
 
 	if envVarAccr := os.Getenv("ACCRUAL_SYSTEM_ADDRESS"); envVarAccr != "" {

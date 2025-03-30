@@ -3,9 +3,9 @@ package orders
 import (
 	"database/sql"
 	"errors"
-	"gopher-market/internal/auth"
 	"gopher-market/internal/logging"
 	"gopher-market/internal/model"
+	"gopher-market/internal/store"
 )
 
 var ErrOrderNotFound = errors.New("order not found")
@@ -113,7 +113,7 @@ func GetUserByOrderNumber(db *sql.DB, orderNumber string) (*model.User, error) {
 		Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Balance)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, auth.ErrUserNotFound
+			return nil, store.ErrUserNotFound
 		}
 		return nil, err
 	}
