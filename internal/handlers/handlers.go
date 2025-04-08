@@ -99,11 +99,11 @@ func (h *Handler) LoginUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Authorization", fmt.Sprintf("Bearer %s", authToken))
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{
+	/*json.NewEncoder(w).Encode(map[string]string{
 		"status":  "success",
 		"message": "User registered and authenticated",
 		"token":   authToken,
-	})
+	})*/
 }
 
 func readRequestBody(r *http.Request) (string, error) {

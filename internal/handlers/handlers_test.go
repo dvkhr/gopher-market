@@ -1,6 +1,5 @@
 package handlers
 
-/*
 import (
 	"bytes"
 	"context"
@@ -19,27 +18,27 @@ import (
 )
 
 var (
-	cfg    config.Config
-	server Server
-	r      *chi.Mux
+	cfg     config.Config
+	handler Handler
+	r       *chi.Mux
 )
 
 func TestMain(m *testing.M) {
 	cfg.Address = "localhost:8080"
-	cfg.DBDsn = "postgres://admin:12345@localhost:5432/loyalty_bonus_system?sslmode=disable"
+	cfg.DBDSN = "postgres://admin:12345@localhost:5432/loyalty_bonus_system?sslmode=disable"
 	exitCode := m.Run()
 
 	os.Exit(exitCode)
 }
 
 func cleanupDatabase(testUser string) {
-	server, _ := NewServer(cfg)
-	err := server.Store.DB.Ping()
+	handler, _ := NewHandler(&cfg)
+	err := handler.Service.Repo.DB.Ping()
 	if err != nil {
 		log.Fatalf("Database connection failed: %v", err)
 	}
 
-	tx, err := server.Store.DB.Begin()
+	tx, err := handler.Service.Repo.DB.Begin()
 	if err != nil {
 		log.Fatalf("Failed to begin transaction: %v", err)
 	}
@@ -65,12 +64,13 @@ func cleanupDatabase(testUser string) {
 }
 
 func TestRegisterUser(t *testing.T) {
-	server, _ := NewServer(cfg)
+
+	handler, _ := NewHandler(&cfg)
 
 	cleanupDatabase("testuser")
 
 	r := chi.NewRouter()
-	r.Post("/api/user/register", server.RegisterUser)
+	r.Post("/api/user/register", handler.RegisterUser)
 
 	t.Run("Successful registration", func(t *testing.T) {
 
@@ -139,10 +139,10 @@ func TestRegisterUser(t *testing.T) {
 }
 
 func TestLoginUser(t *testing.T) {
-	server, _ := NewServer(cfg)
+	handler, _ := NewHandler(&cfg)
 
 	r := chi.NewRouter()
-	r.Post("/api/user/login", server.LoginUser)
+	r.Post("/api/user/login", handler.LoginUser)
 	t.Run("Successful authentication", func(t *testing.T) {
 
 		requestBody := map[string]string{
@@ -223,13 +223,13 @@ func mockAuthMiddlewareTestUser2(next http.Handler) http.Handler {
 	})
 }
 func TestUploadOrder(t *testing.T) {
-	server, _ := NewServer(cfg)
+	handler, _ := NewHandler(&cfg)
 
 	r := chi.NewRouter()
 
 	t.Run("Valid new order number", func(t *testing.T) {
 		r.Use(mockAuthMiddlewareTestUser1)
-		r.Post("/api/user/orders", server.UploadOrder)
+		r.Post("/api/user/orders", handler.UploadOrder)
 		reqBody := strings.NewReader("7601295780")
 		req, _ := http.NewRequest(http.MethodPost, "/api/user/orders", reqBody)
 		req.Header.Set("Content-Type", "text/plain")
@@ -254,7 +254,7 @@ func TestUploadOrder(t *testing.T) {
 	})
 	t.Run("Duplicate order number by same user", func(t *testing.T) {
 		r.Use(mockAuthMiddlewareTestUser1)
-		r.Post("/api/user/orders", server.UploadOrder)
+		r.Post("/api/user/orders", handler.UploadOrder)
 
 		reqBody := strings.NewReader("7601295780")
 		req, _ := http.NewRequest(http.MethodPost, "/api/user/orders", reqBody)
@@ -270,7 +270,7 @@ func TestUploadOrder(t *testing.T) {
 	})
 	t.Run("Duplicate order number by other user", func(t *testing.T) {
 		r.Use(mockAuthMiddlewareTestUser2)
-		r.Post("/api/user/orders", server.UploadOrder)
+		r.Post("/api/user/orders", handler.UploadOrder)
 
 		reqBody := strings.NewReader("7601295780")
 		req, _ := http.NewRequest(http.MethodPost, "/api/user/orders", reqBody)
@@ -285,4 +285,3 @@ func TestUploadOrder(t *testing.T) {
 		}
 	})
 }
-*/
