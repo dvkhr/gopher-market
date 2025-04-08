@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"gopher-market/internal/logging"
 	"gopher-market/internal/store"
 
 	"golang.org/x/crypto/bcrypt"
@@ -32,6 +33,10 @@ func (s *Service) Login(ctx context.Context, login, password string) (bool, erro
 		}
 		return false, err
 	}
+
+	logging.Logg.Debug("Login", "Login", login)
+	logging.Logg.Debug("Login", "Password", password)
+	logging.Logg.Debug("Login", "user.PasswordHash", user.PasswordHash)
 
 	err = s.CheckPassword(user.PasswordHash, password)
 	if err != nil {

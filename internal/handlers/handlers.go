@@ -43,13 +43,17 @@ func (h *Handler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	logging.Logg.Debug("RegisterUser", "requestBody.Login", requestBody.Login)
+	logging.Logg.Debug("RegisterUser", "requestBody.Password", requestBody.Password)
+
 	passwordHash, err := h.Service.HashPassword(requestBody.Password)
 	if err != nil {
 		http.Error(w, "Failed hash the password", http.StatusInternalServerError)
 		return
 	}
+	logging.Logg.Debug("HashPassword", passwordHash)
 
-	_, err = h.Service.Register(r.Context(), requestBody.Login, passwordHash)
+	_, err = h.Service.Register(r.Context(), requestBody.Login, requestBody.Password)
 	if err != nil {
 		http.Error(w, "Login already exists", http.StatusConflict)
 		return
@@ -79,6 +83,9 @@ func (h *Handler) LoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	logging.Logg.Debug("LoginUser", "requestBody.Login", requestBody.Login)
+	logging.Logg.Debug("LoginUser", "requestBody.Password", requestBody.Password)
+
 	isValid, err := h.Service.Login(r.Context(), requestBody.Login, requestBody.Password)
 	if err != nil {
 		logging.Logg.Error("Login failed", "error", err)
@@ -99,11 +106,11 @@ func (h *Handler) LoginUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Authorization", fmt.Sprintf("Bearer %s", authToken))
 
 	w.WriteHeader(http.StatusOK)
-	/*json.NewEncoder(w).Encode(map[string]string{
+	json.NewEncoder(w).Encode(map[string]string{
 		"status":  "success",
 		"message": "User registered and authenticated",
 		"token":   authToken,
-	})*/
+	})
 }
 
 func readRequestBody(r *http.Request) (string, error) {
