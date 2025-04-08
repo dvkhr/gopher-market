@@ -12,7 +12,7 @@ var (
 	ErrInvalidCredentials = errors.New("invalid login or password")
 )
 
-func (s *Auth) HashPassword(password string) (string, error) {
+func (s *Service) HashPassword(password string) (string, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return "", err
@@ -20,12 +20,12 @@ func (s *Auth) HashPassword(password string) (string, error) {
 	return string(hashedPassword), nil
 }
 
-func (s *Auth) CheckPassword(passwordHash, password string) error {
+func (s *Service) CheckPassword(passwordHash, password string) error {
 	return bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password))
 
 }
-func (s *Auth) Login(ctx context.Context, login, password string) (bool, error) {
-	user, err := s.UserRepo.GetUserByLogin(login)
+func (s *Service) Login(ctx context.Context, login, password string) (bool, error) {
+	user, err := s.Repo.GetUserByLogin(login)
 	if err != nil {
 		if errors.Is(err, store.ErrUserNotFound) {
 			return false, nil
@@ -41,11 +41,11 @@ func (s *Auth) Login(ctx context.Context, login, password string) (bool, error) 
 	return true, nil
 }
 
-func (s *Auth) Register(ctx context.Context, login, password string) (int, error) {
+func (s *Service) Register(ctx context.Context, login, password string) (int, error) {
 	hashedPassword, err := s.HashPassword(password)
 	if err != nil {
 		return 0, err
 	}
 
-	return s.UserRepo.CreateUser(login, hashedPassword)
+	return s.Repo.CreateUser(login, hashedPassword)
 }

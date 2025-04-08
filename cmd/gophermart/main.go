@@ -14,8 +14,6 @@ import (
 	"gopher-market/internal/logging"
 	"gopher-market/internal/loyalty"
 	"gopher-market/internal/model"
-	"gopher-market/internal/orders"
-	"gopher-market/internal/transactions"
 )
 
 func main() {
@@ -69,9 +67,9 @@ func main() {
 					"accrual", result.Accrual,
 				)
 
-				order, _ := orders.GetOrderByNumber(handler.AuthService.UserRepo.DB, result.Order)
+				order, _ := handler.Service.Repo.GetOrderByNumber(result.Order)
 				if order.Status != model.StatusProcessed && order.Status != model.StatusInvalid {
-					if err := transactions.Update(handler.AuthService.UserRepo.DB, result.Order, result.Status, result.Accrual); err != nil {
+					if err := handler.Service.Repo.UpdateOrder(result.Order, result.Status, result.Accrual); err != nil {
 						logging.Logg.Error("Failed to update order status",
 							"order", result.Order,
 							"error", err,
@@ -119,7 +117,7 @@ func main() {
 			return
 
 		case <-ticker.C:
-			orderNumbers, err := orders.GetUnfinishedOrders(handler.AuthService.UserRepo.DB)
+			orderNumbers, err := handler.Service.Repo.GetUnfinishedOrders()
 			if err != nil {
 				logging.Logg.Error("Failed to fetch unfinished orders", "error", err)
 				continue

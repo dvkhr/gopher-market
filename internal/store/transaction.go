@@ -1,36 +1,33 @@
-package transactions
+package store
 
 import (
-	"database/sql"
 	"errors"
 	"gopher-market/internal/logging"
 	"gopher-market/internal/model"
-	"gopher-market/internal/orders"
 	"time"
 )
 
 var ErrInsufficientFunds = errors.New("insufficient funds (402)")
 var ErrFailCommTrans = errors.New("failed to commit transaction")
 
-func GetwithdrawnBalance(db *sql.DB, username string) (float32, error) {
-	/*var withdrawnBalance float32
-		user, _ := auth.GetUserByLogin(db, username)
+func (r *Database) GetwithdrawnBalance(username string) (float32, error) {
+	var withdrawnBalance float32
+	user, _ := r.GetUserByLogin(username)
 
-		err := db.QueryRow(`
+	err := r.DB.QueryRow(`
 		SELECT COALESCE(SUM(amount), 0)
 	        FROM transactions
 	        WHERE user_id = $1 AND transactions_type = $2`,
-			user.ID, model.Withdraw).Scan(&withdrawnBalance)
-		if err != nil {
-			return 0, err
-		}
-	*/
-	return 0, nil //withdrawnBalance, nil
+		user.ID, model.Withdraw).Scan(&withdrawnBalance)
+	if err != nil {
+		return 0, err
+	}
+	return withdrawnBalance, nil
 }
 
-func CreateTransactionWithdraw(db *sql.DB, user *model.User, orderNumber string, amount float32) error {
+func (r *Database) CreateTransactionWithdraw(user *model.User, orderNumber string, amount float32) error {
 	logging.Logg.Info("Process withdraw")
-	tx, err := db.Begin()
+	tx, err := r.DB.Begin()
 	if err != nil {
 		return err
 	}
@@ -73,22 +70,22 @@ func CreateTransactionWithdraw(db *sql.DB, user *model.User, orderNumber string,
 	return nil
 }
 
-func Getwithdrawals(db *sql.DB, userID int) ([]model.Transactions, error) {
+func (r *Database) Getwithdrawals(userID int) ([]model.Transaction, error) {
 	Getwithdrawals := `
 	SELECT order_number, amount, updated_at 
 	FROM transactions 
 	WHERE user_id = $1 AND transactions_type = $2
     ORDER BY updated_at DESC`
 
-	rows, err := db.Query(Getwithdrawals, userID, model.Withdraw)
+	rows, err := r.DB.Query(Getwithdrawals, userID, model.Withdraw)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var withdrawals []model.Transactions
+	var withdrawals []model.Transaction
 	for rows.Next() {
-		var withdrawal model.Transactions
+		var withdrawal model.Transaction
 		err := rows.Scan(&withdrawal.OrderNumber, &withdrawal.Amount, &withdrawal.UpdatedAt)
 		if err != nil {
 			return nil, err
@@ -103,8 +100,8 @@ func Getwithdrawals(db *sql.DB, userID int) ([]model.Transactions, error) {
 	return withdrawals, nil
 }
 
-func Update(db *sql.DB, orderNumber string, status string, accrual float32) error {
-	tx, err := db.Begin()
+func (r *Database) UpdateOrder(orderNumber string, status string, accrual float32) error {
+	tx, err := r.DB.Begin()
 	if err != nil {
 		return err
 	}
@@ -115,7 +112,7 @@ func Update(db *sql.DB, orderNumber string, status string, accrual float32) erro
 		}
 	}()
 
-	user, err := orders.GetUserByOrderNumber(db, orderNumber)
+	user, err := r.GetUserByOrderNumber(orderNumber)
 	if err != nil {
 		logging.Logg.Error("Failed to commit transaction GetUserByOrderNumber", "error", ErrFailCommTrans)
 		return err

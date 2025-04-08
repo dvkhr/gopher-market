@@ -2,24 +2,19 @@ package service
 
 import (
 	"gopher-market/internal/store"
+	"regexp"
 )
 
-type Auth struct {
-	UserRepo store.Database
+type Service struct {
+	Repo store.Database
 }
 
-func NewAuthService(userRepo store.Database) *Auth {
-	return &Auth{UserRepo: userRepo}
+func NewService(repo store.Database) *Service {
+	return &Service{Repo: repo}
 }
 
-/*
-func NewService(config config.Config) (*Service, error) {
-	var s store.Database
-	err := s.NewStorage(config.DBDsn)
-	if err != nil {
-		return nil, err
-	}
+var numericRegex = regexp.MustCompile(`^[0-9]+$`)
 
-	return &Service{Store: s, Config: config}, nil
+func IsNumeric(word string) bool {
+	return numericRegex.MatchString(word)
 }
-*/

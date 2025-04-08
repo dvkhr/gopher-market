@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"gopher-market/internal/logging"
+	"gopher-market/internal/model"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -12,6 +13,17 @@ import (
 type Database struct {
 	DBDSN string
 	DB    *sql.DB
+}
+
+type Repo interface {
+	CreateUser(login, passwordHash string) (int, error)
+	GetUserByLogin(username string) (*model.User, error)
+	GetUserByID(id int) (*model.User, error)
+	GetOrderByNumber(string) (*model.Order, error)
+	GetWithdrawnBalance(userID int) (float32, error)
+	CreateTransactionWithdraw(userID int, orderNumber string, amount float32) error
+	GetWithdrawals(userID int) ([]model.Transaction, error)
+	UpdateOrder(orderNumber string, status string, accrual float32) error
 }
 
 func (r *Database) NewStorage(DBDSN string) error {

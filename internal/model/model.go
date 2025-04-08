@@ -35,7 +35,7 @@ const (
 	Withdraw TType = "withdraw" // снятие
 )
 
-type Transactions struct {
+type Transaction struct {
 	ID               int       `json:"id,omitempty"`                //  уникальный идентификатор транзакции
 	UserID           string    `json:"user_id,omitempty"`           // уникальный идентификатор пользователя
 	OrderNumber      string    `json:"order,omitempty"`             // номер заказа

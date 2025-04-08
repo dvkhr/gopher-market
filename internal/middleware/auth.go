@@ -2,9 +2,9 @@ package middleware
 
 import (
 	"context"
-	"gopher-market/internal/auth"
 	"gopher-market/internal/config"
 	"gopher-market/internal/logging"
+	"gopher-market/internal/service"
 	"net/http"
 	"strings"
 )
@@ -25,7 +25,7 @@ func AuthMiddleware(cfg *config.Config) func(next http.Handler) http.Handler {
 				return
 			}
 
-			username, err := auth.ParseToken(tokenString, cfg)
+			username, err := service.ParseToken(tokenString, cfg)
 			if err != nil {
 				logging.Logg.Warn("Invalid token", "error", err)
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)

@@ -1,19 +1,17 @@
-package orders
+package store
 
 import (
 	"database/sql"
 	"errors"
 	"gopher-market/internal/logging"
 	"gopher-market/internal/model"
-	"gopher-market/internal/store"
 )
 
 var ErrOrderNotFound = errors.New("order not found")
-var ErrDuplicate = errors.New("ordernumber already exists")
 
-func GetOrderByNumber(db *sql.DB, orderNumber string) (*model.Order, error) {
+func (r *Database) GetOrderByNumber(orderNumber string) (*model.Order, error) {
 	var order model.Order
-	err := db.QueryRow("SELECT order_id, user_id, order_number, accrual, uploaded_at, status FROM orders WHERE order_number = $1", orderNumber).
+	err := r.DB.QueryRow("SELECT order_id, user_id, order_number, accrual, uploaded_at, status FROM orders WHERE order_number = $1", orderNumber).
 		Scan(&order.ID, &order.UserID, &order.OrderNumber, &order.Accrual, &order.UploadedAt, &order.Status)
 
 	if err != nil {
@@ -25,12 +23,12 @@ func GetOrderByNumber(db *sql.DB, orderNumber string) (*model.Order, error) {
 	return &order, nil
 }
 
-func CreateOrder(db *sql.DB, userID int, orderNumber string) (int, error) {
+func (r *Database) CreateOrder(userID int, orderNumber string) (int, error) {
 	createOrder := `INSERT INTO orders(user_id, order_number, status) VALUES ($1, $2, $3) RETURNING order_id`
 
 	var id int
 
-	err := db.QueryRow(createOrder, userID, orderNumber, model.StatusNew).Scan(&id)
+	err := r.DB.QueryRow(createOrder, userID, orderNumber, model.StatusNew).Scan(&id)
 	if err != nil {
 		logging.Logg.Error("err", "err", err)
 		if err == sql.ErrNoRows {
@@ -41,7 +39,7 @@ func CreateOrder(db *sql.DB, userID int, orderNumber string) (int, error) {
 	return id, nil
 }
 
-func GetOrders(db *sql.DB, userID int) ([]model.Order, error) {
+func (r *Database) GetOrders(userID int) ([]model.Order, error) {
 
 	GetOrders := `
         SELECT order_id, user_id, order_number, accrual, uploaded_at, status
@@ -49,7 +47,7 @@ func GetOrders(db *sql.DB, userID int) ([]model.Order, error) {
         WHERE user_id = $1
         ORDER BY uploaded_at DESC
     `
-	rows, err := db.Query(GetOrders, userID)
+	rows, err := r.DB.Query(GetOrders, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -74,14 +72,14 @@ func GetOrders(db *sql.DB, userID int) ([]model.Order, error) {
 	return orders, nil
 }
 
-func GetUnfinishedOrders(db *sql.DB) ([]string, error) {
+func (r *Database) GetUnfinishedOrders() ([]string, error) {
 
 	GetOrders := `
         SELECT order_number
         FROM orders
         WHERE status NOT IN ('INVALID', 'PROCESSED')
     `
-	rows, err := db.Query(GetOrders)
+	rows, err := r.DB.Query(GetOrders)
 	if err != nil {
 		return nil, err
 	}
@@ -104,16 +102,16 @@ func GetUnfinishedOrders(db *sql.DB) ([]string, error) {
 	return orderNumbers, nil
 }
 
-func GetUserByOrderNumber(db *sql.DB, orderNumber string) (*model.User, error) {
+func (r *Database) GetUserByOrderNumber(orderNumber string) (*model.User, error) {
 	var user model.User
-	err := db.QueryRow(`
+	err := r.DB.QueryRow(`
 	SELECT u.user_id, u.login, u.password_hash, u.current_balance  
 	FROM orders o JOIN users u ON o.user_id = u.user_id 
 	WHERE o.order_number = $1;`, orderNumber).
 		Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Balance)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, store.ErrUserNotFound
+			return nil, ErrUserNotFound
 		}
 		return nil, err
 	}

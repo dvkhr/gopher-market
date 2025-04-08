@@ -9,19 +9,13 @@ import (
 var ErrUserNotFound = errors.New("user not found")
 var ErrDuplicate = errors.New("login already exists")
 
-type UserRepository interface {
-	CreateUser(login, passwordHash string) (int, error)
-	GetUserByLogin(username string) (*model.User, error)
-	GetUserByID(id int) (*model.User, error)
-}
-
-type UserDB struct {
+/*type UserDB struct {
 	Db *sql.DB
 }
 
 func NewUserDB(db *sql.DB) *UserDB {
 	return &UserDB{Db: db}
-}
+}*/
 
 func (r *Database) CreateUser(login, passwordHash string) (int, error) {
 	createUser := `INSERT INTO users(login, password_hash) VALUES ($1, $2) RETURNING user_id`
