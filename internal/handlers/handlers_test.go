@@ -67,7 +67,7 @@ func TestRegisterUser(t *testing.T) {
 
 	handler, _ := NewHandler(&cfg)
 
-	cleanupDatabase("testuser")
+	//cleanupDatabase("testuser")
 
 	r := chi.NewRouter()
 	r.Post("/api/user/register", handler.RegisterUser)

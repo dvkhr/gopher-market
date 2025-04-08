@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	ErrInvalidFormat = errors.New("invalid order number format")
-	ErrInvalidNumber = errors.New("invalid order number")
+	ErrInvalidFormat = errors.New("invalid order number format (StatusBadRequest)")
+	ErrInvalidNumber = errors.New("invalid order number (StatusUnprocessableEntity)")
 )
 
 func (s *Service) CheckOrder(orderNumber, username string) error {
@@ -31,10 +31,10 @@ func (s *Service) CheckOrder(orderNumber, username string) error {
 		user, _ := s.Repo.GetUserByOrderNumber(orderNumber)
 		if user.Username == username {
 			logging.Logg.Info("Order already uploaded by the user", "order_id", order.ID)
-			return errors.New("the order was uploaded by the user")
+			return errors.New("the order was uploaded by the user (StatusOK)")
 		}
 		logging.Logg.Warn("Order uploaded by another user", "order_id", order.ID)
-		return errors.New("order number already uploaded by another user")
+		return errors.New("order number already uploaded by another user(StatusConflict)")
 	}
 	return nil
 }
